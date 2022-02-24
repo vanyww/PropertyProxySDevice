@@ -1,0 +1,3 @@
+[submodule "SDevice/sdevicecore"]
+	path = SDevice/sdevicecore
+	url = https://gitlab.dnouglublenie.ru/nonius/embeddedfirmware/embeddedcommon/sdevicecore.git
