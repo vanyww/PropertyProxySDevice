@@ -1,4 +1,4 @@
-#include "LocalSDevice/ParameterManager/core.h"
+#include "../Inc/ParameterManager/core.h"
 
 #include <alloca.h>
 #include <memory.h>

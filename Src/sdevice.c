@@ -1,4 +1,4 @@
-#include "LocalSDevice/ParameterManager/core.h"
+#include "../Inc/ParameterManager/core.h"
 
 __SDEVICE_INITIALIZE_HANDLE_DECLARATION(ParameterManager, handle)
 {
