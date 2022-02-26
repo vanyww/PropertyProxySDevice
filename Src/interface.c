@@ -164,7 +164,7 @@ static inline ParameterTransactionProxyStatus WriteWithRollback(__SDEVICE_HANDLE
       }
 
       /* reversion failed, return "unhandled" error flag */
-      SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_VALUE_REVERSION_FAIL);
+      SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_ROLLBACK_FAIL);
       return PARAMETER_MANAGER_STATUS_UNHANDLED_ERROR;
    }
 
