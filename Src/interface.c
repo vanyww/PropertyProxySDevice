@@ -209,7 +209,6 @@ ParameterTransactionProxyStatus ParameterTransactionProxyRead(__SDEVICE_HANDLE(P
 
    SDeviceOperationStatus status;
 
-   /* partial parameter interface case */
    if(arguments->Parameter.HasPartialInterface == true)
    {
       status = arguments->Parameter.GetFunction(arguments->Parameter.Handle,
@@ -220,7 +219,6 @@ ParameterTransactionProxyStatus ParameterTransactionProxyRead(__SDEVICE_HANDLE(P
                                                    .Size = arguments->Size
                                                 });
    }
-   /* common parameter interface case */
    else
    {
       /* check if read has to be done for full value, if so, proxy buffer is unnecessary */
