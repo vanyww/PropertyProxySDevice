@@ -1,4 +1,4 @@
-#include "../Inc/ParameterManager/core.h"
+#include "../Inc/ParameterTransactionProxySDevice/core.h"
 
 __SDEVICE_INITIALIZE_HANDLE_DECLARATION(ParameterManager, handle)
 {

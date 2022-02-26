@@ -1,4 +1,4 @@
-#include "../Inc/ParameterManager/core.h"
+#include "../Inc/ParameterTransactionProxySDevice/core.h"
 
 #include <alloca.h>
 #include <memory.h>
