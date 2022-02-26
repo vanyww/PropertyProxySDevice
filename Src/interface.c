@@ -164,7 +164,7 @@ static inline ParameterTransactionProxyStatus WriteWithRollback(__SDEVICE_HANDLE
       }
 
       /* reversion failed, return "unhandled" error flag */
-      SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_VALUE_REVERSION_FAIL);
+      SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_ROLLBACK_FAIL);
       return PARAMETER_MANAGER_STATUS_UNHANDLED_ERROR;
    }
 
@@ -209,7 +209,6 @@ ParameterTransactionProxyStatus ParameterTransactionProxyRead(__SDEVICE_HANDLE(P
 
    SDeviceOperationStatus status;
 
-   /* partial parameter interface case */
    if(arguments->Parameter.HasPartialInterface == true)
    {
       status = arguments->Parameter.GetFunction(arguments->Parameter.Handle,
@@ -220,7 +219,6 @@ ParameterTransactionProxyStatus ParameterTransactionProxyRead(__SDEVICE_HANDLE(P
                                                    .Size = arguments->Size
                                                 });
    }
-   /* common parameter interface case */
    else
    {
       /* check if read has to be done for full value, if so, proxy buffer is unnecessary */
