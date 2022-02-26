@@ -20,7 +20,7 @@ typedef enum
 
 typedef struct
 {
-   ParameterTransactionProxyParameter Parameter;
+   const ParameterTransactionProxyParameter *Parameter;
    size_t Size;
    size_t Offset;
 } ParameterTransactionProxyArguments;
@@ -49,8 +49,8 @@ typedef enum
 /* Satty's interface end */
 
 ParameterTransactionProxyStatus ParameterTransactionProxyRead(__SDEVICE_HANDLE(ParameterTransactionProxy) *,
-                                                              ParameterTransactionProxyArguments *,
+                                                              ParameterTransactionProxyArguments,
                                                               void *);
 ParameterTransactionProxyStatus ParameterTransactionProxyWrite(__SDEVICE_HANDLE(ParameterTransactionProxy) *,
-                                                               ParameterTransactionProxyArguments *,
+                                                               ParameterTransactionProxyArguments,
                                                                const void *);
