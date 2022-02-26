@@ -23,7 +23,7 @@ static inline ParameterTransactionProxyStatus WriteWithoutRollback(__SDEVICE_HAN
       if(arguments->Size != arguments->Parameter.Size)
       {
          SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_WRONG_OPERATION_TYPE);
-         return PARAMETER_MANAGER_STATUS_UNHANDLED_ERROR;
+         return PARAMETER_TRANSACTION_PROXY_STATUS_UNHANDLED_ERROR;
       }
 
       status = arguments->Parameter.SetFunction(arguments->Parameter.Handle, data);
@@ -32,19 +32,19 @@ static inline ParameterTransactionProxyStatus WriteWithoutRollback(__SDEVICE_HAN
    switch(status)
    {
       case SDEVICE_OPERATION_STATUS_OK:
-         return PARAMETER_MANAGER_STATUS_OK;
+         return PARAMETER_TRANSACTION_PROXY_STATUS_OK;
 
       case SDEVICE_OPERATION_STATUS_VALIDATION_ERROR:
          SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_SET_FAIL);
-         return PARAMETER_MANAGER_STATUS_HANDLED_ERROR;
+         return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
 
       case SDEVICE_OPERATION_STATUS_PROCESSING_ERROR:
          SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_SET_FAIL);
-         return PARAMETER_MANAGER_STATUS_UNHANDLED_ERROR;
+         return PARAMETER_TRANSACTION_PROXY_STATUS_UNHANDLED_ERROR;
 
       default:
          SDeviceAssert(false);
-         return PARAMETER_MANAGER_STATUS_UNHANDLED_ERROR;
+         return PARAMETER_TRANSACTION_PROXY_STATUS_UNHANDLED_ERROR;
    }
 }
 
@@ -69,7 +69,7 @@ static inline ParameterTransactionProxyStatus WriteWithRollback(__SDEVICE_HANDLE
       if(status != SDEVICE_OPERATION_STATUS_OK)
       {
          SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_GET_FAIL);
-         return PARAMETER_MANAGER_STATUS_HANDLED_ERROR;
+         return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
       }
 
       /* set new value part */
@@ -102,12 +102,12 @@ static inline ParameterTransactionProxyStatus WriteWithRollback(__SDEVICE_HANDLE
          if(arguments->Parameter.GetFunction(arguments->Parameter.Handle, rollbackValue) != SDEVICE_OPERATION_STATUS_OK)
          {
             SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_GET_FAIL);
-            return PARAMETER_MANAGER_STATUS_HANDLED_ERROR;
+            return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
          }
 
          /* check if parameter alreay has this value */
          if(memcmp(rollbackValue, data, arguments->Parameter.Size) == 0)
-            return PARAMETER_MANAGER_STATUS_OK;
+            return PARAMETER_TRANSACTION_PROXY_STATUS_OK;
 
          /* try set new value */
          status = arguments->Parameter.SetFunction(arguments->Parameter.Handle, data);
@@ -127,12 +127,12 @@ static inline ParameterTransactionProxyStatus WriteWithRollback(__SDEVICE_HANDLE
          if(arguments->Parameter.GetFunction(arguments->Parameter.Handle, newValue) != SDEVICE_OPERATION_STATUS_OK)
          {
             SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_GET_FAIL);
-            return PARAMETER_MANAGER_STATUS_HANDLED_ERROR;
+            return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
          }
 
          /* check if parameter alreay has this value */
          if(memcmp(newValue + arguments->Offset, data, arguments->Size) == 0)
-            return PARAMETER_MANAGER_STATUS_OK;
+            return PARAMETER_TRANSACTION_PROXY_STATUS_OK;
 
          /* save old value part that will be updated to be able to revert changes */
          memcpy(rollbackValue, newValue + arguments->Offset, arguments->Size);
@@ -160,30 +160,30 @@ static inline ParameterTransactionProxyStatus WriteWithRollback(__SDEVICE_HANDLE
       if(status == SDEVICE_OPERATION_STATUS_OK)
       {
          SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_SET_FAIL);
-         return PARAMETER_MANAGER_STATUS_HANDLED_ERROR;
+         return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
       }
 
       /* reversion failed, return "unhandled" error flag */
       SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_ROLLBACK_FAIL);
-      return PARAMETER_MANAGER_STATUS_UNHANDLED_ERROR;
+      return PARAMETER_TRANSACTION_PROXY_STATUS_UNHANDLED_ERROR;
    }
 
    switch(status)
    {
       case SDEVICE_OPERATION_STATUS_OK:
-         return PARAMETER_MANAGER_STATUS_OK;
+         return PARAMETER_TRANSACTION_PROXY_STATUS_OK;
          break;
 
       case SDEVICE_OPERATION_STATUS_VALIDATION_ERROR:
          SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_SET_FAIL);
-         return PARAMETER_MANAGER_STATUS_HANDLED_ERROR;
+         return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
 
       default:
          SDeviceAssert(false);
          break;
    }
 
-   return PARAMETER_MANAGER_STATUS_UNHANDLED_ERROR;
+   return PARAMETER_TRANSACTION_PROXY_STATUS_UNHANDLED_ERROR;
 }
 
 ParameterTransactionProxyStatus ParameterTransactionProxyRead(__SDEVICE_HANDLE(ParameterTransactionProxy) *handle,
@@ -198,13 +198,13 @@ ParameterTransactionProxyStatus ParameterTransactionProxyRead(__SDEVICE_HANDLE(P
    if(arguments->Parameter.GetFunction == NULL)
    {
       SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_WRONG_OPERATION_TYPE);
-      return PARAMETER_MANAGER_STATUS_HANDLED_ERROR;
+      return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
    }
 
    if(SIZE_MAX - arguments->Size < arguments->Offset || arguments->Parameter.Size > arguments->Offset + arguments->Size)
    {
       SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_WRONG_OPERATION_SIZE);
-      return PARAMETER_MANAGER_STATUS_HANDLED_ERROR;
+      return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
    }
 
    SDeviceOperationStatus status;
@@ -238,10 +238,10 @@ ParameterTransactionProxyStatus ParameterTransactionProxyRead(__SDEVICE_HANDLE(P
    if(status != SDEVICE_OPERATION_STATUS_OK)
    {
       SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_GET_FAIL);
-      return PARAMETER_MANAGER_STATUS_HANDLED_ERROR;
+      return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
    }
 
-   return PARAMETER_MANAGER_STATUS_OK;
+   return PARAMETER_TRANSACTION_PROXY_STATUS_OK;
 }
 
 ParameterTransactionProxyStatus ParameterTransactionProxyWrite(__SDEVICE_HANDLE(ParameterTransactionProxy) *handle,
@@ -256,13 +256,13 @@ ParameterTransactionProxyStatus ParameterTransactionProxyWrite(__SDEVICE_HANDLE(
    if(arguments->Parameter.SetFunction == NULL)
    {
       SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_WRONG_OPERATION_TYPE);
-      return PARAMETER_MANAGER_STATUS_HANDLED_ERROR;
+      return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
    }
 
    if(SIZE_MAX - arguments->Size < arguments->Offset || arguments->Parameter.Size > arguments->Offset + arguments->Size)
    {
       SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_WRONG_OPERATION_SIZE);
-      return PARAMETER_MANAGER_STATUS_HANDLED_ERROR;
+      return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
    }
 
    return (arguments->Parameter.GetFunction == NULL) ?
