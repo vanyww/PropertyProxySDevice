@@ -20,6 +20,12 @@ static inline ParameterTransactionProxyStatus WriteWithoutRollback(__SDEVICE_HAN
    }
    else
    {
+      if(SIZE_MAX - arguments.Size < arguments.Offset || arguments.Parameter->Size > arguments.Offset + arguments.Size)
+      {
+         SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_WRONG_OPERATION_SIZE);
+         return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
+      }
+
       if(arguments.Size != arguments.Parameter->Size)
       {
          SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_WRONG_OPERATION_TYPE);
@@ -96,6 +102,12 @@ static inline ParameterTransactionProxyStatus WriteWithRollback(__SDEVICE_HANDLE
    }
    else
    {
+      if(SIZE_MAX - arguments.Size < arguments.Offset || arguments.Parameter->Size > arguments.Offset + arguments.Size)
+      {
+         SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_WRONG_OPERATION_SIZE);
+         return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
+      }
+
       if(arguments.Size == arguments.Parameter->Size)
       {
          /* save current value be able to revert changes */
@@ -200,12 +212,6 @@ ParameterTransactionProxyStatus ParameterTransactionProxyRead(__SDEVICE_HANDLE(P
       return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
    }
 
-   if(SIZE_MAX - arguments.Size < arguments.Offset || arguments.Parameter->Size > arguments.Offset + arguments.Size)
-   {
-      SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_WRONG_OPERATION_SIZE);
-      return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
-   }
-
    SDeviceOperationStatus status;
 
    if(arguments.Parameter->HasPartialInterface == true)
@@ -220,6 +226,12 @@ ParameterTransactionProxyStatus ParameterTransactionProxyRead(__SDEVICE_HANDLE(P
    }
    else
    {
+      if(SIZE_MAX - arguments.Size < arguments.Offset || arguments.Parameter->Size > arguments.Offset + arguments.Size)
+      {
+         SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_WRONG_OPERATION_SIZE);
+         return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
+      }
+
       /* check if read has to be done for full value, if so, proxy buffer is unnecessary */
       if(arguments.Size == arguments.Parameter->Size)
       {
@@ -254,12 +266,6 @@ ParameterTransactionProxyStatus ParameterTransactionProxyWrite(__SDEVICE_HANDLE(
    if(arguments.Parameter->SetFunction == NULL)
    {
       SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_WRONG_OPERATION_TYPE);
-      return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
-   }
-
-   if(SIZE_MAX - arguments.Size < arguments.Offset || arguments.Parameter->Size > arguments.Offset + arguments.Size)
-   {
-      SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_WRONG_OPERATION_SIZE);
       return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
    }
 
