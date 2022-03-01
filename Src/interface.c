@@ -117,10 +117,6 @@ static inline ParameterTransactionProxyStatus WriteWithRollback(__SDEVICE_HANDLE
             return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
          }
 
-         /* check if parameter alreay has this value */
-         if(memcmp(rollbackValue, data, arguments.Parameter->Size) == 0)
-            return PARAMETER_TRANSACTION_PROXY_STATUS_OK;
-
          /* try set new value */
          status = arguments.Parameter->SetFunction(arguments.Parameter->Handle, data);
 
@@ -141,10 +137,6 @@ static inline ParameterTransactionProxyStatus WriteWithRollback(__SDEVICE_HANDLE
             SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_GET_FAIL);
             return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
          }
-
-         /* check if parameter alreay has this value */
-         if(memcmp(newValue + arguments.Offset, data, arguments.Size) == 0)
-            return PARAMETER_TRANSACTION_PROXY_STATUS_OK;
 
          /* save old value part that will be updated to be able to revert changes */
          memcpy(rollbackValue, newValue + arguments.Offset, arguments.Size);
