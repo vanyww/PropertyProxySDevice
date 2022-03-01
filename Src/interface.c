@@ -20,7 +20,7 @@ static inline ParameterTransactionProxyStatus WriteWithoutRollback(__SDEVICE_HAN
    }
    else
    {
-      if(SIZE_MAX - arguments.Size < arguments.Offset || arguments.Parameter->Size > arguments.Offset + arguments.Size)
+      if(SIZE_MAX - arguments.Size < arguments.Offset || arguments.Parameter->Size < arguments.Offset + arguments.Size)
       {
          SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_WRONG_OPERATION_SIZE);
          return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
@@ -102,7 +102,7 @@ static inline ParameterTransactionProxyStatus WriteWithRollback(__SDEVICE_HANDLE
    }
    else
    {
-      if(SIZE_MAX - arguments.Size < arguments.Offset || arguments.Parameter->Size > arguments.Offset + arguments.Size)
+      if(SIZE_MAX - arguments.Size < arguments.Offset || arguments.Parameter->Size < arguments.Offset + arguments.Size)
       {
          SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_WRONG_OPERATION_SIZE);
          return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
@@ -116,10 +116,6 @@ static inline ParameterTransactionProxyStatus WriteWithRollback(__SDEVICE_HANDLE
             SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_GET_FAIL);
             return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
          }
-
-         /* check if parameter alreay has this value */
-         if(memcmp(rollbackValue, data, arguments.Parameter->Size) == 0)
-            return PARAMETER_TRANSACTION_PROXY_STATUS_OK;
 
          /* try set new value */
          status = arguments.Parameter->SetFunction(arguments.Parameter->Handle, data);
@@ -141,10 +137,6 @@ static inline ParameterTransactionProxyStatus WriteWithRollback(__SDEVICE_HANDLE
             SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_GET_FAIL);
             return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
          }
-
-         /* check if parameter alreay has this value */
-         if(memcmp(newValue + arguments.Offset, data, arguments.Size) == 0)
-            return PARAMETER_TRANSACTION_PROXY_STATUS_OK;
 
          /* save old value part that will be updated to be able to revert changes */
          memcpy(rollbackValue, newValue + arguments.Offset, arguments.Size);
@@ -226,7 +218,7 @@ ParameterTransactionProxyStatus ParameterTransactionProxyRead(__SDEVICE_HANDLE(P
    }
    else
    {
-      if(SIZE_MAX - arguments.Size < arguments.Offset || arguments.Parameter->Size > arguments.Offset + arguments.Size)
+      if(SIZE_MAX - arguments.Size < arguments.Offset || arguments.Parameter->Size < arguments.Offset + arguments.Size)
       {
          SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_WRONG_OPERATION_SIZE);
          return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
