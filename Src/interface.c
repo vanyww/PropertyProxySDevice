@@ -261,7 +261,7 @@ ParameterTransactionProxyStatus ParameterTransactionProxyWrite(__SDEVICE_HANDLE(
       return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
    }
 
-   return (arguments.Parameter->GetFunction == NULL) ?
+   return (arguments.Parameter->GetFunction == NULL || arguments.Parameter->AllowsRollback != true) ?
           WriteWithoutRollback(handle, arguments, data) :
           WriteWithRollback(handle, arguments, data);
 }

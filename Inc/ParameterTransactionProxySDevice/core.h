@@ -8,6 +8,7 @@ typedef struct
    __SDEVICE_SET_PARAMETER_POINTER(SetFunction);
    __SDEVICE_GET_PARAMETER_POINTER(GetFunction);
    size_t Size;
+   bool AllowsRollback;
    bool HasPartialInterface;
 } ParameterTransactionProxyParameter;
 
