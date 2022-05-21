@@ -3,6 +3,18 @@
 #include <alloca.h>
 #include <memory.h>
 
+/**********************************************************************************************************************/
+
+__SDEVICE_INITIALIZE_HANDLE_DECLARATION(ParameterTransactionProxy, handle)
+{
+   SDeviceAssert(handle != NULL);
+   SDeviceAssert(handle->IsInitialized != true);
+
+   handle->IsInitialized = true;
+}
+
+/**********************************************************************************************************************/
+
 static inline ParameterTransactionProxyStatus WriteWithoutRollback(__SDEVICE_HANDLE(ParameterTransactionProxy) *handle,
                                                                    ParameterTransactionProxyArguments arguments,
                                                                    const void *data)
