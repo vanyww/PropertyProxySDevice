@@ -12,13 +12,6 @@ typedef struct
    bool HasPartialInterface;
 } ParameterTransactionProxyParameter;
 
-typedef enum
-{
-   PARAMETER_TRANSACTION_PROXY_STATUS_OK,
-   PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR,
-   PARAMETER_TRANSACTION_PROXY_STATUS_UNHANDLED_ERROR
-} ParameterTransactionProxyStatus;
-
 typedef struct
 {
    const ParameterTransactionProxyParameter *Parameter;
@@ -26,17 +19,26 @@ typedef struct
    size_t Offset;
 } ParameterTransactionProxyArguments;
 
+typedef enum
+{
+   PARAMETER_TRANSACTION_PROXY_STATUS_OK,
+   PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR,
+   PARAMETER_TRANSACTION_PROXY_STATUS_UNHANDLED_ERROR
+} ParameterTransactionProxyStatus;
+
 /* Satty's interface start */
 
 __SDEVICE_HANDLE_FORWARD_DECLARATION(ParameterTransactionProxy);
+__SDEVICE_RUNTIME_DATA_FORWARD_DECLARATION(ParameterTransactionProxy);
 
-typedef struct { } __SDEVICE_INIT_DATA(ParameterTransactionProxy);
+typedef struct { } __SDEVICE_INIT_ARGUMENTS(ParameterTransactionProxy);
 
-typedef struct { } __SDEVICE_RUNTIME_DATA(ParameterTransactionProxy);
+typedef __SDEVICE_INIT_ARGUMENTS(ParameterTransactionProxy) __SDEVICE_INIT_DATA(ParameterTransactionProxy);
 
 __SDEVICE_HANDLE_DEFINITION(ParameterTransactionProxy);
 
-__SDEVICE_INITIALIZE_HANDLE_DECLARATION(ParameterTransactionProxy,);
+__SDEVICE_CREATE_HANDLE_DECLARATION(ParameterTransactionProxy,,,);
+__SDEVICE_DISPOSE_HANDLE_DECLARATION(ParameterTransactionProxy,);
 
 typedef enum
 {
