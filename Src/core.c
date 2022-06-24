@@ -5,12 +5,24 @@
 
 /**********************************************************************************************************************/
 
-__SDEVICE_INITIALIZE_HANDLE_DECLARATION(ParameterTransactionProxy, handle)
+__SDEVICE_CREATE_HANDLE_DECLARATION(ParameterTransactionProxy, arguments, instanceIndex, context)
 {
-   SDeviceAssert(handle != NULL);
-   SDeviceAssert(handle->IsInitialized != true);
+   SDeviceAssert(arguments != NULL);
 
-   handle->IsInitialized = true;
+   __SDEVICE_HANDLE(ParameterTransactionProxy) handle =
+   {
+      .Runtime = NULL,
+      .Context = context,
+      .InstanceIndex = instanceIndex,
+      .IsInitialized = true
+   };
+
+   return handle;
+}
+
+__SDEVICE_DISPOSE_HANDLE_DECLARATION(ParameterTransactionProxy, handle)
+{
+   return;
 }
 
 /**********************************************************************************************************************/
