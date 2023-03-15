@@ -64,9 +64,9 @@
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.lib.release.179894656.680026748.267137254" moduleId="org.eclipse.cdt.core.settings" name="LibraryBuild">
 				<externalSettings>
 					<externalSetting>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="includePath" name="/ParameterTransactionProxySDevice"/>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="libraryPath" name="/ParameterTransactionProxySDevice/LibraryBuild"/>
-						<entry flags="RESOLVED" kind="libraryFile" name="ParameterTransactionProxySDevice" srcPrefixMapping="" srcRootPath=""/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="includePath" name="/TransactionProxySDevice"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="libraryPath" name="/TransactionProxySDevice/LibraryBuild"/>
+						<entry flags="RESOLVED" kind="libraryFile" name="TransactionProxySDevice" srcPrefixMapping="" srcRootPath=""/>
 					</externalSetting>
 				</externalSettings>
 				<extensions>
