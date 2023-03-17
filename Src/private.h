@@ -1,5 +1,13 @@
 #pragma once
 
-#include "../Inc/ParameterTransactionProxySDevice/core.h"
+#include "TransactionProxySDevice/public.h"
 
-struct { } __SDEVICE_RUNTIME_DATA(ParameterTransactionProxy);
+SDEVICE_RUNTIME_DATA_FORWARD_DECLARATION(TransactionProxy);
+
+SDEVICE_RUNTIME_DATA_DECLARATION(TransactionProxy)
+{
+
+};
+
+SDEVICE_HANDLE_DECLARATION(TransactionProxy);
+SDEVICE_INTERNAL_ALIASES_DECLARATION(TransactionProxy);

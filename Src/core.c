@@ -1,291 +1,285 @@
-#include "../Inc/ParameterTransactionProxySDevice/core.h"
+#include "private.h"
 
-#include <alloca.h>
+#include "SDeviceCore/errors.h"
+#include "SDeviceCore/heap.h"
+
 #include <memory.h>
 
-/**********************************************************************************************************************/
-
-__SDEVICE_CREATE_HANDLE_DECLARATION(ParameterTransactionProxy, arguments, instanceIndex, context)
+SDEVICE_CREATE_HANDLE_DECLARATION(TransactionProxy, init, parent, identifier, context)
 {
-   SDeviceAssert(arguments != NULL);
+   SDeviceAssert(init != NULL);
 
-   __SDEVICE_HANDLE(ParameterTransactionProxy) handle =
+   const ThisInitData *_init = init;
+   ThisHandle *handle = SDeviceMalloc(sizeof(ThisHandle));
+
+   handle->Init = *_init;
+   handle->Header = (SDeviceHandleHeader)
    {
-      .Runtime = NULL,
       .Context = context,
-      .InstanceIndex = instanceIndex,
-      .IsInitialized = true
+      .ParentHandle = parent,
+      .Identifier = identifier,
+      .LatestStatus = TRANSACTION_PROXY_SDEVICE_STATUS_OK
    };
 
    return handle;
 }
 
-__SDEVICE_DISPOSE_HANDLE_DECLARATION(ParameterTransactionProxy, handle)
+SDEVICE_DISPOSE_HANDLE_DECLARATION(TransactionProxy, _handlePointer)
 {
-   return;
+   SDeviceAssert(_handlePointer != NULL);
+
+   ThisHandle **handlePointer = _handlePointer;
+   ThisHandle *handle = *handlePointer;
+
+   SDeviceAssert(handle != NULL);
+
+   SDeviceFree(*handlePointer);
+   *handlePointer = NULL;
 }
 
-/**********************************************************************************************************************/
-
-static inline ParameterTransactionProxyStatus WriteWithoutRollback(__SDEVICE_HANDLE(ParameterTransactionProxy) *handle,
-                                                                   ParameterTransactionProxyArguments arguments,
-                                                                   const void *data)
+static bool WriteWithoutRollback(SDEVICE_HANDLE(TransactionProxy) *handle,
+                                 const TransactionProxySDeviceProperty *property,
+                                 const SDeviceSetPartialPropertyParameters *parameters)
 {
-   SDeviceOperationStatus status;
-   if(arguments.Parameter->HasPartialInterface == true)
-   {
-      status = arguments.Parameter->SetFunction(arguments.Parameter->Handle,
-                                                &(SDevicePartialParameterArguments)
-                                                {
-                                                   .Data.Set = data,
-                                                   .Offset = arguments.Offset,
-                                                   .Size = arguments.Size
-                                                });
-   }
-   else
-   {
-      if(SIZE_MAX - arguments.Size < arguments.Offset || arguments.Parameter->Size < arguments.Offset + arguments.Size)
-      {
-         SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_WRONG_OPERATION_SIZE);
-         return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
-      }
+   SDeviceDebugAssert(handle != NULL);
+   SDeviceDebugAssert(property != NULL);
+   SDeviceDebugAssert(parameters != NULL);
+   SDeviceDebugAssert(parameters->Data != NULL);
+   SDeviceDebugAssert(property->Interface.Set != NULL);
+   SDeviceDebugAssert(parameters->Size <= SIZE_MAX - parameters->Offset);
+   SDeviceDebugAssert(parameters->Size + parameters->Offset <= property->Size);
 
-      if(arguments.Size != arguments.Parameter->Size)
-      {
-         SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_WRONG_OPERATION_TYPE);
-         return PARAMETER_TRANSACTION_PROXY_STATUS_UNHANDLED_ERROR;
-      }
+   SDevicePropertyOperationStatus status;
 
-      status = arguments.Parameter->SetFunction(arguments.Parameter->Handle, data);
+   /* partial property */
+   if(property->HasPartialInterface)
+   {
+      status = property->Interface.AsPartial.Set(property->Handle, parameters);
+      goto Exit;
    }
 
-   switch(status)
+   /* common property: exact value size */
+   if(parameters->Size == property->Size)
    {
-      case SDEVICE_OPERATION_STATUS_OK:
-         return PARAMETER_TRANSACTION_PROXY_STATUS_OK;
-
-      case SDEVICE_OPERATION_STATUS_VALIDATION_ERROR:
-         SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_SET_FAIL);
-         return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
-
-      case SDEVICE_OPERATION_STATUS_PROCESSING_ERROR:
-         SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_SET_FAIL);
-         return PARAMETER_TRANSACTION_PROXY_STATUS_UNHANDLED_ERROR;
-
-      default:
-         SDeviceAssert(false);
-         return PARAMETER_TRANSACTION_PROXY_STATUS_UNHANDLED_ERROR;
+      status = property->Interface.AsCommon.Set(property->Handle, parameters->Data);
+      goto Exit;
    }
+
+   /* common property: smaller value size */
+   {
+      SDeviceDebugAssert(property->Interface.AsCommon.Get != NULL);
+
+      char valueBuffer[property->Size];
+
+      /* read current value */
+      status = property->Interface.AsCommon.Get(property->Handle, valueBuffer);
+      if(status != SDEVICE_PROPERTY_OPERATION_STATUS_OK)
+         goto ErrorExit;
+
+      /* prepare and write new value, using current value */
+      memcpy(&valueBuffer[parameters->Offset], parameters->Data, parameters->Size);
+      status = property->Interface.AsCommon.Set(property->Handle, valueBuffer);
+      goto Exit;
+   }
+
+Exit:
+   if(status != SDEVICE_PROPERTY_OPERATION_STATUS_OK)
+   {
+ErrorExit:
+      SDeviceLogStatus(handle, status);
+      return false;
+   }
+
+   return true;
 }
 
-static inline ParameterTransactionProxyStatus WriteWithRollback(__SDEVICE_HANDLE(ParameterTransactionProxy) *handle,
-                                                                ParameterTransactionProxyArguments arguments,
-                                                                const void *data)
+static bool WriteWithRollback(SDEVICE_HANDLE(TransactionProxy) *handle,
+                              const TransactionProxySDeviceProperty *property,
+                              const SDeviceSetPartialPropertyParameters *parameters)
 {
-   bool rollbackFlag = false;
-   SDeviceOperationStatus status;
-   void *rollbackValue = alloca(arguments.Size);
-   if(arguments.Parameter->HasPartialInterface == true)
+   SDeviceDebugAssert(handle != NULL);
+   SDeviceDebugAssert(property != NULL);
+   SDeviceDebugAssert(parameters != NULL);
+   SDeviceDebugAssert(parameters->Data != NULL);
+   SDeviceDebugAssert(property->AllowsRollback);
+   SDeviceDebugAssert(property->Interface.Set != NULL);
+   SDeviceDebugAssert(property->Interface.Get != NULL);
+   SDeviceDebugAssert(parameters->Size <= SIZE_MAX - parameters->Offset);
+   SDeviceDebugAssert(parameters->Size + parameters->Offset <= property->Size);
+
+   bool rollbackAttemptFlag = false;
+   char rollbackValueBuffer[parameters->Size];
+   SDevicePropertyOperationStatus status;
+
+   /* partial property */
+   if(property->HasPartialInterface)
    {
-      /* save old value part that will be updated to be able to rollback */
-      status = arguments.Parameter->GetFunction(arguments.Parameter->Handle,
-                                                &(SDevicePartialParameterArguments)
-                                                {
-                                                   .Data.Get = rollbackValue,
-                                                   .Offset = arguments.Offset,
-                                                   .Size = arguments.Size
-                                                });
+      /* try read current value part, that will be written (will be used in case rollback is needed) */
+      status = property->Interface.AsPartial.Get(property->Handle,
+                                                 &(const SDeviceGetPartialPropertyParameters)
+                                                 {
+                                                    .Offset = parameters->Offset,
+                                                    .Size = parameters->Size,
+                                                    .Data = rollbackValueBuffer
+                                                 });
+      if(status != SDEVICE_PROPERTY_OPERATION_STATUS_OK)
+         goto ErrorExit;
 
-      if(status != SDEVICE_OPERATION_STATUS_OK)
+      /* try write new value part */
+      status = property->Interface.AsPartial.Set(property->Handle, parameters);
+
+      /* in case of processing error during write procedure, try to rollback all the changes */
+      if(status == SDEVICE_PROPERTY_OPERATION_STATUS_PROCESSING_ERROR)
       {
-         SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_GET_FAIL);
-         return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
-      }
-
-      /* set new value part */
-      status = arguments.Parameter->SetFunction(arguments.Parameter->Handle,
-                                                &(SDevicePartialParameterArguments)
-                                                {
-                                                   .Data.Set = data,
-                                                   .Offset = arguments.Offset,
-                                                   .Size = arguments.Size
-                                                });
-
-      /* in case of processing error during write procedure, rollback all changes */
-      if(status == SDEVICE_OPERATION_STATUS_PROCESSING_ERROR)
-      {
-         rollbackFlag = true;
-         status = arguments.Parameter->SetFunction(arguments.Parameter->Handle,
-                                                   &(SDevicePartialParameterArguments)
+         rollbackAttemptFlag = true;
+         status = property->Interface.AsPartial.Set(property->Handle,
+                                                   &(const SDeviceSetPartialPropertyParameters)
                                                    {
-                                                      .Data.Set = rollbackValue,
-                                                      .Offset = arguments.Offset,
-                                                      .Size = arguments.Size
+                                                      .Offset = parameters->Offset,
+                                                      .Size = parameters->Size,
+                                                      .Data = rollbackValueBuffer
                                                    });
       }
+      goto Exit;
    }
-   else
+
+   /* common property: exact value size */
+   if(parameters->Size == property->Size)
    {
-      if(SIZE_MAX - arguments.Size < arguments.Offset || arguments.Parameter->Size < arguments.Offset + arguments.Size)
+      /* try read current value (will be used in case rollback is needed) */
+      status = property->Interface.AsCommon.Get(property->Handle, rollbackValueBuffer);
+      if(status != SDEVICE_PROPERTY_OPERATION_STATUS_OK)
+         goto ErrorExit;
+
+      /* try write new value */
+      status = property->Interface.AsCommon.Set(property->Handle, parameters->Data);
+
+      /* in case of processing error during write procedure, try to rollback all the changes */
+      if(status == SDEVICE_PROPERTY_OPERATION_STATUS_PROCESSING_ERROR)
       {
-         SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_WRONG_OPERATION_SIZE);
-         return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
+         rollbackAttemptFlag = true;
+         status = property->Interface.AsCommon.Set(property->Handle, rollbackValueBuffer);
       }
-
-      if(arguments.Size == arguments.Parameter->Size)
-      {
-         /* save current value be able to revert changes */
-         if(arguments.Parameter->GetFunction(arguments.Parameter->Handle, rollbackValue) != SDEVICE_OPERATION_STATUS_OK)
-         {
-            SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_GET_FAIL);
-            return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
-         }
-
-         /* try set new value */
-         status = arguments.Parameter->SetFunction(arguments.Parameter->Handle, data);
-
-         /* in case of processing error during write procedure, rollback all changes */
-         if(status == SDEVICE_OPERATION_STATUS_PROCESSING_ERROR)
-         {
-            rollbackFlag = true;
-            status = arguments.Parameter->SetFunction(arguments.Parameter->Handle, rollbackValue);
-         }
-      }
-      else
-      {
-         void *newValue = alloca(arguments.Size);
-
-         /* read full current value */
-         if(arguments.Parameter->GetFunction(arguments.Parameter->Handle, newValue) != SDEVICE_OPERATION_STATUS_OK)
-         {
-            SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_GET_FAIL);
-            return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
-         }
-
-         /* save old value part that will be updated to be able to revert changes */
-         memcpy(rollbackValue, newValue + arguments.Offset, arguments.Size);
-
-         /* create full new value */
-         memcpy(newValue + arguments.Offset, data, arguments.Size);
-
-         /* try set new value */
-         status = arguments.Parameter->SetFunction(arguments.Parameter->Handle, newValue);
-
-         /* in case of processing error during write procedure, rollback all changes */
-         if(status == SDEVICE_OPERATION_STATUS_PROCESSING_ERROR)
-         {
-            rollbackFlag = true;
-            memcpy(newValue + arguments.Offset, rollbackValue, arguments.Size);
-            status = arguments.Parameter->SetFunction(arguments.Parameter->Handle, newValue);
-         }
-      }
+      goto Exit;
    }
 
-   /* process state in case of write rollback due to processing error */
-   if(rollbackFlag == true)
+   /* common property: smaller value size */
    {
-      /* reversion succesfull, return "handled" error flag */
-      if(status == SDEVICE_OPERATION_STATUS_OK)
+      char valueBuffer[property->Size];
+
+      /* try read current value to compose new value */
+      status = property->Interface.AsCommon.Get(property->Handle, valueBuffer);
+      if(status != SDEVICE_PROPERTY_OPERATION_STATUS_OK)
+         goto ErrorExit;
+
+      /* save old value part, that will be written (will be used in case rollback is needed) */
+      memcpy(rollbackValueBuffer, &valueBuffer[parameters->Offset], parameters->Size);
+
+      /* compose new value */
+      memcpy(&valueBuffer[parameters->Offset], parameters->Data, parameters->Size);
+
+      /* try write new value */
+      status = property->Interface.AsCommon.Set(property->Handle, valueBuffer);
+
+      /* in case of processing error during write procedure, try to rollback all the changes */
+      if(status == SDEVICE_PROPERTY_OPERATION_STATUS_PROCESSING_ERROR)
       {
-         SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_SET_FAIL);
-         return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
+         rollbackAttemptFlag = true;
+         memcpy(&valueBuffer[parameters->Offset], rollbackValueBuffer, parameters->Size);
+         status = property->Interface.AsCommon.Set(property->Handle, valueBuffer);
       }
-
-      /* reversion failed, return "unhandled" error flag */
-      SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_ROLLBACK_FAIL);
-      return PARAMETER_TRANSACTION_PROXY_STATUS_UNHANDLED_ERROR;
+      goto Exit;
    }
 
-   switch(status)
+Exit:
+   if(rollbackAttemptFlag)
    {
-      case SDEVICE_OPERATION_STATUS_OK:
-         return PARAMETER_TRANSACTION_PROXY_STATUS_OK;
-         break;
 
-      case SDEVICE_OPERATION_STATUS_VALIDATION_ERROR:
-         SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_SET_FAIL);
-         return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
-
-      default:
-         SDeviceAssert(false);
-         break;
+      SDeviceLogStatus(handle, (status == SDEVICE_PROPERTY_OPERATION_STATUS_OK) ?
+                               TRANSACTION_PROXY_SDEVICE_STATUS_ROLLBACK_SUCCESS :
+                               TRANSACTION_PROXY_SDEVICE_STATUS_ROLLBACK_FAIL);
+      return false;
    }
 
-   return PARAMETER_TRANSACTION_PROXY_STATUS_UNHANDLED_ERROR;
+   if(status != SDEVICE_PROPERTY_OPERATION_STATUS_OK)
+   {
+ErrorExit:
+      SDeviceLogStatus(handle, status);
+      return false;
+   }
+
+   return true;
 }
 
-ParameterTransactionProxyStatus ParameterTransactionProxyRead(__SDEVICE_HANDLE(ParameterTransactionProxy) *handle,
-                                                              ParameterTransactionProxyArguments arguments,
-                                                              void *data)
+bool TransactionProxySDeviceTryRead(SDEVICE_HANDLE(TransactionProxy) *handle,
+                                    const TransactionProxySDeviceProperty *property,
+                                    const SDeviceGetPartialPropertyParameters *parameters)
 {
-   SDeviceAssert(data != NULL);
    SDeviceAssert(handle != NULL);
-   SDeviceAssert(handle->IsInitialized == true);
+   SDeviceAssert(property != NULL);
+   SDeviceAssert(parameters != NULL);
+   SDeviceAssert(parameters->Data != NULL);
+   SDeviceAssert(property->Interface.Get != NULL);
+   SDeviceAssert(parameters->Size <= SIZE_MAX - parameters->Offset);
+   SDeviceAssert(parameters->Size + parameters->Offset <= property->Size);
 
-   if(arguments.Parameter->GetFunction == NULL)
+   SDevicePropertyOperationStatus status;
+
+   /* partial property */
+   if(property->HasPartialInterface)
    {
-      SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_WRONG_OPERATION_TYPE);
-      return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
+      status = property->Interface.AsPartial.Get(property->Handle, parameters);
+      goto Exit;
    }
 
-   SDeviceOperationStatus status;
-
-   if(arguments.Parameter->HasPartialInterface == true)
+   /* common property: exact value size */
+   if(parameters->Size == property->Size)
    {
-      status = arguments.Parameter->GetFunction(arguments.Parameter->Handle,
-                                                &(SDevicePartialParameterArguments)
-                                                {
-                                                   .Data.Get = data,
-                                                   .Offset = arguments.Offset,
-                                                   .Size = arguments.Size
-                                                });
-   }
-   else
-   {
-      if(SIZE_MAX - arguments.Size < arguments.Offset || arguments.Parameter->Size < arguments.Offset + arguments.Size)
-      {
-         SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_WRONG_OPERATION_SIZE);
-         return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
-      }
-
-      /* check if read has to be done for full value, if so, proxy buffer is unnecessary */
-      if(arguments.Size == arguments.Parameter->Size)
-      {
-         status = arguments.Parameter->GetFunction(arguments.Parameter->Handle, data);
-      }
-      else
-      {
-         /* use proxy buffer to get full value and then copy only requested part */
-         void *valueBuffer = alloca(arguments.Parameter->Size);
-         status = arguments.Parameter->GetFunction(arguments.Parameter->Handle, valueBuffer);
-         memcpy(data, valueBuffer + arguments.Offset, arguments.Size);
-      }
+      status = property->Interface.AsCommon.Get(property->Handle, parameters->Data);
+      goto Exit;
    }
 
-   if(status != SDEVICE_OPERATION_STATUS_OK)
+   /* common property: smaller value size */
    {
-      SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_GET_FAIL);
-      return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
+      /* use proxy buffer to get full value and then copy only requested part */
+      char valueBuffer[property->Size];
+
+      status = property->Interface.AsCommon.Get(property->Handle, valueBuffer);
+      if(status != SDEVICE_PROPERTY_OPERATION_STATUS_OK)
+         goto ErrorExit;
+
+      memcpy(parameters->Data, &valueBuffer[parameters->Offset], parameters->Size);
    }
 
-   return PARAMETER_TRANSACTION_PROXY_STATUS_OK;
+Exit:
+   if(status != SDEVICE_PROPERTY_OPERATION_STATUS_OK)
+   {
+ErrorExit:
+      SDeviceLogStatus(handle, status);
+      return false;
+   }
+
+   return true;
 }
 
-ParameterTransactionProxyStatus ParameterTransactionProxyWrite(__SDEVICE_HANDLE(ParameterTransactionProxy) *handle,
-                                                               ParameterTransactionProxyArguments arguments,
-                                                               const void *data)
+bool TransactionProxySDeviceTryWrite(SDEVICE_HANDLE(TransactionProxy) *handle,
+                                     const TransactionProxySDeviceProperty *property,
+                                     const SDeviceSetPartialPropertyParameters *parameters)
 {
-   SDeviceAssert(data != NULL);
    SDeviceAssert(handle != NULL);
-   SDeviceAssert(handle->IsInitialized == true);
+   SDeviceAssert(property != NULL);
+   SDeviceAssert(parameters != NULL);
+   SDeviceAssert(parameters->Data != NULL);
+   SDeviceAssert(property->Interface.Set != NULL);
+   SDeviceAssert(parameters->Size <= SIZE_MAX - parameters->Offset);
+   SDeviceAssert(parameters->Size + parameters->Offset <= property->Size);
 
-   if(arguments.Parameter->SetFunction == NULL)
-   {
-      SDeviceRuntimeErrorRaised(handle, PARAMETER_TRANSACTION_PROXY_RUNTIME_ERROR_WRONG_OPERATION_TYPE);
-      return PARAMETER_TRANSACTION_PROXY_STATUS_HANDLED_ERROR;
-   }
+   if(property->Interface.Get != NULL && property->AllowsRollback)
+      return WriteWithRollback(handle, property, parameters);
 
-   return (arguments.Parameter->GetFunction == NULL || arguments.Parameter->AllowsRollback != true) ?
-          WriteWithoutRollback(handle, arguments, data) :
-          WriteWithRollback(handle, arguments, data);
+   SDeviceAssert(property->HasPartialInterface      ||
+                 parameters->Size == property->Size ||
+                 property->Interface.Get != NULL);
+
+   return WriteWithoutRollback(handle, property, parameters);
 }
