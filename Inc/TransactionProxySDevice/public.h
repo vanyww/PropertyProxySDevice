@@ -8,14 +8,14 @@
 #error SDevice core version is incorrect.
 #endif
 
-#define PARAMETER_TRANSACTION_PROXY_SDEVICE_VERSION_MAJOR 1
-#define PARAMETER_TRANSACTION_PROXY_SDEVICE_VERSION_MINOR 0
-#define PARAMETER_TRANSACTION_PROXY_SDEVICE_VERSION_PATCH 0
-#define PARAMETER_TRANSACTION_PROXY_SDEVICE_CORE_VERSION ((SDeviceVersion)                                             \
+#define TRANSACTION_PROXY_SDEVICE_VERSION_MAJOR 1
+#define TRANSACTION_PROXY_SDEVICE_VERSION_MINOR 0
+#define TRANSACTION_PROXY_SDEVICE_VERSION_PATCH 1
+#define TRANSACTION_PROXY_SDEVICE_CORE_VERSION ((SDeviceVersion)                                                       \
 {                                                                                                                      \
-   .Major = PARAMETER_TRANSACTION_PROXY_SDEVICE_VERSION_MAJOR,                                                         \
-   .Minor = PARAMETER_TRANSACTION_PROXY_SDEVICE_VERSION_MINOR,                                                         \
-   .Patch = PARAMETER_TRANSACTION_PROXY_SDEVICE_VERSION_PATCH                                                          \
+   .Major = TRANSACTION_PROXY_SDEVICE_VERSION_MAJOR,                                                                   \
+   .Minor = TRANSACTION_PROXY_SDEVICE_VERSION_MINOR,                                                                   \
+   .Patch = TRANSACTION_PROXY_SDEVICE_VERSION_PATCH                                                                    \
 })
 
 typedef struct

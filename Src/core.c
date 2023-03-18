@@ -24,17 +24,17 @@ SDEVICE_CREATE_HANDLE_DECLARATION(TransactionProxy, init, parent, identifier, co
    return handle;
 }
 
-SDEVICE_DISPOSE_HANDLE_DECLARATION(TransactionProxy, _handlePointer)
+SDEVICE_DISPOSE_HANDLE_DECLARATION(TransactionProxy, handlePointer)
 {
-   SDeviceAssert(_handlePointer != NULL);
+   SDeviceAssert(handlePointer != NULL);
 
-   ThisHandle **handlePointer = _handlePointer;
-   ThisHandle *handle = *handlePointer;
+   ThisHandle **_handlePointer = handlePointer;
+   ThisHandle *handle = *_handlePointer;
 
    SDeviceAssert(handle != NULL);
 
-   SDeviceFree(*handlePointer);
-   *handlePointer = NULL;
+   SDeviceFree(handle);
+   *_handlePointer = NULL;
 }
 
 static bool WriteWithoutRollback(SDEVICE_HANDLE(TransactionProxy) *handle,
