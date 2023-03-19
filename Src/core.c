@@ -12,6 +12,8 @@ SDEVICE_CREATE_HANDLE_DECLARATION(TransactionProxy, init, parent, identifier, co
    const ThisInitData *_init = init;
    ThisHandle *handle = SDeviceMalloc(sizeof(ThisHandle));
 
+   SDeviceAssert(handle != NULL);
+
    handle->Init = *_init;
    handle->Header = (SDeviceHandleHeader)
    {
