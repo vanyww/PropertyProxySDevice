@@ -5,14 +5,9 @@
 
 #include <stdbool.h>
 
-#define TRANSACTION_PROXY_SDEVICE_VERSION_MAJOR 1
+#define TRANSACTION_PROXY_SDEVICE_VERSION_MAJOR 2
 #define TRANSACTION_PROXY_SDEVICE_VERSION_MINOR 0
-#define TRANSACTION_PROXY_SDEVICE_VERSION_PATCH 2
-#define TRANSACTION_PROXY_SDEVICE_CORE_VERSION ((SDeviceVersion)                                                       \
-{                                                                                                                      \
-   .Major = TRANSACTION_PROXY_SDEVICE_VERSION_MAJOR,                                                                   \
-   .Minor = TRANSACTION_PROXY_SDEVICE_VERSION_MINOR,                                                                   \
-   .Patch = TRANSACTION_PROXY_SDEVICE_VERSION_PATCH                                                                    \
+#define TRANSACTION_PROXY_SDEVICE_VERSION_PATCH 0
 })
 
 typedef struct
