@@ -1,12 +1,9 @@
 #pragma once
 
-#include "SDeviceCore/core.h"
+#include "config.h"
+#include "dependencies.h"
 
 #include <stdbool.h>
-
-#if (SDEVICE_CORE_VERSION_MAJOR != 7) || (SDEVICE_CORE_VERSION_MINOR < 0)
-#error SDevice core version is incorrect.
-#endif
 
 #define TRANSACTION_PROXY_SDEVICE_VERSION_MAJOR 1
 #define TRANSACTION_PROXY_SDEVICE_VERSION_MINOR 0
