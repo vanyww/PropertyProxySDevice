@@ -6,24 +6,24 @@
 
 #include <memory.h>
 
-SDEVICE_STRING_NAME_DEFINITION(TransactionProxy);
+SDEVICE_STRING_NAME_DEFINITION(PropertyProxy);
 
-SDEVICE_CREATE_HANDLE_DECLARATION(TransactionProxy, init, parent, identifier, context)
+SDEVICE_CREATE_HANDLE_DECLARATION(PropertyProxy, init, parent, identifier, context)
 {
    ThisHandle *handle = SDeviceMalloc(sizeof(ThisHandle));
    handle->Header = (SDeviceHandleHeader)
    {
       .Context           = context,
       .OwnerHandle       = parent,
-      .SDeviceStringName = SDEVICE_STRING_NAME(TransactionProxy),
-      .LatestStatus      = TRANSACTION_PROXY_SDEVICE_STATUS_OK,
+      .SDeviceStringName = SDEVICE_STRING_NAME(PropertyProxy),
+      .LatestStatus      = PROPERTY_PROXY_SDEVICE_STATUS_OK,
       .Identifier        = identifier
    };
 
    return handle;
 }
 
-SDEVICE_DISPOSE_HANDLE_DECLARATION(TransactionProxy, handlePointer)
+SDEVICE_DISPOSE_HANDLE_DECLARATION(PropertyProxy, handlePointer)
 {
    SDeviceAssert(handlePointer != NULL);
 
@@ -36,9 +36,9 @@ SDEVICE_DISPOSE_HANDLE_DECLARATION(TransactionProxy, handlePointer)
    *_handlePointer = NULL;
 }
 
-static bool TryWriteWithoutRollback(SDEVICE_HANDLE(TransactionProxy)          *handle,
+static bool TryWriteWithoutRollback(SDEVICE_HANDLE(PropertyProxy)             *handle,
                                     void                                      *propertyHandle,
-                                    const TransactionProxySDeviceProperty     *property,
+                                    const PropertyProxySDeviceProperty        *property,
                                     const SDeviceSetPartialPropertyParameters *parameters)
 {
    SDeviceDebugAssert(handle != NULL);
@@ -86,10 +86,10 @@ static bool TryWriteWithoutRollback(SDEVICE_HANDLE(TransactionProxy)          *h
    return true;
 }
 
-#if defined(TRANSACTION_PROXY_SDEVICE_USE_ROLLBACK)
-static bool TryWriteWithRollback(SDEVICE_HANDLE(TransactionProxy)          *handle,
+#if defined(PROPERTY_PROXY_SDEVICE_USE_ROLLBACK)
+static bool TryWriteWithRollback(SDEVICE_HANDLE(PropertyProxy)             *handle,
                                  void                                      *propertyHandle,
-                                 const TransactionProxySDeviceProperty     *property,
+                                 const PropertyProxySDeviceProperty        *property,
                                  const SDeviceSetPartialPropertyParameters *parameters)
 {
    SDeviceDebugAssert(handle != NULL);
@@ -183,8 +183,8 @@ static bool TryWriteWithRollback(SDEVICE_HANDLE(TransactionProxy)          *hand
    if(hasRollbackOccurred)
    {
       SDeviceLogStatus(handle, status == SDEVICE_PROPERTY_OPERATION_STATUS_OK ?
-                               TRANSACTION_PROXY_SDEVICE_STATUS_ROLLBACK_SUCCESS :
-                               TRANSACTION_PROXY_SDEVICE_STATUS_ROLLBACK_FAIL);
+                               PROPERTY_PROXY_SDEVICE_STATUS_ROLLBACK_SUCCESS :
+                               PROPERTY_PROXY_SDEVICE_STATUS_ROLLBACK_FAIL);
       return false;
    }
 
@@ -199,10 +199,10 @@ static bool TryWriteWithRollback(SDEVICE_HANDLE(TransactionProxy)          *hand
 }
 #endif
 
-bool TransactionProxySDeviceTryRead(SDEVICE_HANDLE(TransactionProxy)          *handle,
-                                    void                                      *propertyHandle,
-                                    const TransactionProxySDeviceProperty     *property,
-                                    const SDeviceGetPartialPropertyParameters *parameters)
+bool PropertyProxySDeviceTryRead(SDEVICE_HANDLE(PropertyProxy)             *handle,
+                                 void                                      *propertyHandle,
+                                 const PropertyProxySDeviceProperty        *property,
+                                 const SDeviceGetPartialPropertyParameters *parameters)
 {
    SDeviceAssert(handle != NULL);
    SDeviceAssert(property != NULL);
@@ -245,10 +245,10 @@ bool TransactionProxySDeviceTryRead(SDEVICE_HANDLE(TransactionProxy)          *h
    return true;
 }
 
-bool TransactionProxySDeviceTryWrite(SDEVICE_HANDLE(TransactionProxy)          *handle,
-                                     void                                      *propertyHandle,
-                                     const TransactionProxySDeviceProperty     *property,
-                                     const SDeviceSetPartialPropertyParameters *parameters)
+bool PropertyProxySDeviceTryWrite(SDEVICE_HANDLE(PropertyProxy)             *handle,
+                                  void                                      *propertyHandle,
+                                  const PropertyProxySDeviceProperty        *property,
+                                  const SDeviceSetPartialPropertyParameters *parameters)
 {
    SDeviceAssert(handle != NULL);
    SDeviceAssert(property != NULL);
@@ -259,7 +259,7 @@ bool TransactionProxySDeviceTryWrite(SDEVICE_HANDLE(TransactionProxy)          *
    SDeviceAssert(!WILL_INT_ADD_OVERFLOW(parameters->Size, parameters->Offset) &&
                  parameters->Size + parameters->Offset <= property->Size);
 
-#if defined(TRANSACTION_PROXY_SDEVICE_USE_ROLLBACK)
+#if defined(PROPERTY_PROXY_SDEVICE_USE_ROLLBACK)
    if(property->Interface.Get != NULL && property->AllowsRollback)
       return TryWriteWithRollback(handle, propertyHandle, property, parameters);
 #endif
