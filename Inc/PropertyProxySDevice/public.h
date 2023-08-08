@@ -58,6 +58,8 @@ typedef enum
 
 SDEVICE_INIT_DATA_DECLARATION(PropertyProxy) { };
 
+SDEVICE_STRING_NAME_DECLARATION(PropertyProxy);
+
 SDEVICE_CREATE_HANDLE_DECLARATION(PropertyProxy, init, parent, identifier, context);
 SDEVICE_DISPOSE_HANDLE_DECLARATION(PropertyProxy, handlePointer);
 
