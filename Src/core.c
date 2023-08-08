@@ -37,8 +37,8 @@ SDEVICE_DISPOSE_HANDLE_DECLARATION(PropertyProxy, handlePointer)
 }
 
 static SDevicePropertyOperationStatus TryWriteWithoutRollback(SDEVICE_HANDLE(PropertyProxy)             *handle,
-                                                              void                                      *propertyHandle,
                                                               const PropertyProxySDeviceProperty        *property,
+                                                              void                                      *propertyHandle,
                                                               const SDeviceSetPartialPropertyParameters *parameters)
 {
    SDeviceDebugAssert(handle != NULL);
@@ -72,8 +72,8 @@ static SDevicePropertyOperationStatus TryWriteWithoutRollback(SDEVICE_HANDLE(Pro
 
 #if defined(PROPERTY_PROXY_SDEVICE_USE_ROLLBACK)
 static SDevicePropertyOperationStatus TryWriteWithRollback(SDEVICE_HANDLE(PropertyProxy)             *handle,
-                                                           void                                      *propertyHandle,
                                                            const PropertyProxySDeviceProperty        *property,
+                                                           void                                      *propertyHandle,
                                                            const SDeviceSetPartialPropertyParameters *parameters)
 {
    SDeviceDebugAssert(handle != NULL);
@@ -225,10 +225,10 @@ SDevicePropertyOperationStatus PropertyProxySDeviceTryWrite(SDEVICE_HANDLE(Prope
 
 #if defined(PROPERTY_PROXY_SDEVICE_USE_ROLLBACK)
    if(property->AllowsRollback && property->Interface.Get != NULL)
-      return TryWriteWithRollback(handle, propertyHandle, property, parameters);
+      return TryWriteWithRollback(handle, property, propertyHandle, parameters);
 #endif
 
    SDeviceAssert(property->IsPartial || parameters->Size == property->Size || property->Interface.Get != NULL);
 
-   return TryWriteWithoutRollback(handle, propertyHandle, property, parameters);
+   return TryWriteWithoutRollback(handle, property, propertyHandle, parameters);
 }

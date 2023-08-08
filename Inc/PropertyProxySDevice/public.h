@@ -64,10 +64,10 @@ SDEVICE_CREATE_HANDLE_DECLARATION(PropertyProxy, init, parent, identifier, conte
 SDEVICE_DISPOSE_HANDLE_DECLARATION(PropertyProxy, handlePointer);
 
 SDevicePropertyOperationStatus PropertyProxySDeviceRead(SDEVICE_HANDLE(PropertyProxy)             *handle,
-                                                        void                                      *propertyHandle,
                                                         const PropertyProxySDeviceProperty        *property,
+                                                        void                                      *propertyHandle,
                                                         const SDeviceGetPartialPropertyParameters *parameters);
 SDevicePropertyOperationStatus PropertyProxySDeviceWrite(SDEVICE_HANDLE(PropertyProxy)             *handle,
-                                                         void                                      *propertyHandle,
                                                          const PropertyProxySDeviceProperty        *property,
+                                                         void                                      *propertyHandle,
                                                          const SDeviceSetPartialPropertyParameters *parameters);
