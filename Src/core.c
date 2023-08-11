@@ -36,10 +36,10 @@ SDEVICE_DISPOSE_HANDLE_DECLARATION(PropertyProxy, handlePointer)
    *_handlePointer = NULL;
 }
 
-static SDevicePropertyStatus TryWriteWithoutRollback(SDEVICE_HANDLE(PropertyProxy)             *handle,
-                                                     const PropertyProxySDeviceProperty        *property,
-                                                     void                                      *propertyHandle,
-                                                     const SDeviceSetPartialPropertyParameters *parameters)
+static SDevicePropertyStatus TrySetWithoutRollback(ThisHandle                                *handle,
+                                                   const PropertyProxySDeviceProperty        *property,
+                                                   void                                      *propertyHandle,
+                                                   const SDeviceSetPartialPropertyParameters *parameters)
 {
    SDeviceDebugAssert(handle != NULL);
    SDeviceDebugAssert(property != NULL);
@@ -71,10 +71,10 @@ static SDevicePropertyStatus TryWriteWithoutRollback(SDEVICE_HANDLE(PropertyProx
 }
 
 #if defined(PROPERTY_PROXY_SDEVICE_USE_ROLLBACK)
-static SDevicePropertyStatus TryWriteWithRollback(SDEVICE_HANDLE(PropertyProxy)             *handle,
-                                                  const PropertyProxySDeviceProperty        *property,
-                                                  void                                      *propertyHandle,
-                                                  const SDeviceSetPartialPropertyParameters *parameters)
+static SDevicePropertyStatus TrySetWithRollback(ThisHandle                                *handle,
+                                                const PropertyProxySDeviceProperty        *property,
+                                                void                                      *propertyHandle,
+                                                const SDeviceSetPartialPropertyParameters *parameters)
 {
    SDeviceDebugAssert(handle != NULL);
    SDeviceDebugAssert(property != NULL);
@@ -179,10 +179,10 @@ static SDevicePropertyStatus TryWriteWithRollback(SDEVICE_HANDLE(PropertyProxy) 
 }
 #endif
 
-SDevicePropertyStatus PropertyProxySDeviceTryRead(SDEVICE_HANDLE(PropertyProxy)             *handle,
-                                                  void                                      *propertyHandle,
-                                                  const PropertyProxySDeviceProperty        *property,
-                                                  const SDeviceGetPartialPropertyParameters *parameters)
+SDevicePropertyStatus PropertyProxySDeviceGet(ThisHandle                                *handle,
+                                              const PropertyProxySDeviceProperty        *property,
+                                              void                                      *propertyHandle,
+                                              const SDeviceGetPartialPropertyParameters *parameters)
 {
    SDeviceAssert(handle != NULL);
    SDeviceAssert(property != NULL);
@@ -209,10 +209,10 @@ SDevicePropertyStatus PropertyProxySDeviceTryRead(SDEVICE_HANDLE(PropertyProxy) 
    return status;
 }
 
-SDevicePropertyStatus PropertyProxySDeviceTryWrite(SDEVICE_HANDLE(PropertyProxy)             *handle,
-                                                   void                                      *propertyHandle,
-                                                   const PropertyProxySDeviceProperty        *property,
-                                                   const SDeviceSetPartialPropertyParameters *parameters)
+SDevicePropertyStatus PropertyProxySDeviceSet(ThisHandle                                *handle,
+                                              const PropertyProxySDeviceProperty        *property,
+                                              void                                      *propertyHandle,
+                                              const SDeviceSetPartialPropertyParameters *parameters)
 {
    SDeviceAssert(handle != NULL);
    SDeviceAssert(property != NULL);
@@ -225,10 +225,10 @@ SDevicePropertyStatus PropertyProxySDeviceTryWrite(SDEVICE_HANDLE(PropertyProxy)
 
 #if defined(PROPERTY_PROXY_SDEVICE_USE_ROLLBACK)
    if(property->AllowsRollback && property->Interface.Get != NULL)
-      return TryWriteWithRollback(handle, property, propertyHandle, parameters);
+      return TrySetWithRollback(handle, property, propertyHandle, parameters);
 #endif
 
    SDeviceAssert(property->IsPartial || parameters->Size == property->Size || property->Interface.Get != NULL);
 
-   return TryWriteWithoutRollback(handle, property, propertyHandle, parameters);
+   return TrySetWithoutRollback(handle, property, propertyHandle, parameters);
 }

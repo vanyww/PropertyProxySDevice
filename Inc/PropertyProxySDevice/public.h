@@ -52,8 +52,8 @@ SDEVICE_INIT_DATA_FORWARD_DECLARATION(PropertyProxy);
 typedef enum
 {
    PROPERTY_PROXY_SDEVICE_STATUS_OK,
-   PROPERTY_PROXY_SDEVICE_STATUS_ROLLBACK_SUCCESS,
-   PROPERTY_PROXY_SDEVICE_STATUS_ROLLBACK_FAIL
+   PROPERTY_PROXY_SDEVICE_STATUS_ROLLBACK_FAIL,
+   PROPERTY_PROXY_SDEVICE_STATUS_ROLLBACK_SUCCESS
 } PropertyProxySDeviceStatus;
 
 SDEVICE_INIT_DATA_DECLARATION(PropertyProxy) { };
@@ -63,11 +63,11 @@ SDEVICE_STRING_NAME_DECLARATION(PropertyProxy);
 SDEVICE_CREATE_HANDLE_DECLARATION(PropertyProxy, init, parent, identifier, context);
 SDEVICE_DISPOSE_HANDLE_DECLARATION(PropertyProxy, handlePointer);
 
-SDevicePropertyStatus PropertyProxySDeviceRead(SDEVICE_HANDLE(PropertyProxy)             *handle,
-                                               const PropertyProxySDeviceProperty        *property,
-                                               void                                      *propertyHandle,
-                                               const SDeviceGetPartialPropertyParameters *parameters);
-SDevicePropertyStatus PropertyProxySDeviceWrite(SDEVICE_HANDLE(PropertyProxy)             *handle,
-                                                const PropertyProxySDeviceProperty        *property,
-                                                void                                      *propertyHandle,
-                                                const SDeviceSetPartialPropertyParameters *parameters);
+SDevicePropertyStatus PropertyProxySDeviceGet(SDEVICE_HANDLE(PropertyProxy)             *handle,
+                                              const PropertyProxySDeviceProperty        *property,
+                                              void                                      *propertyHandle,
+                                              const SDeviceGetPartialPropertyParameters *parameters);
+SDevicePropertyStatus PropertyProxySDeviceSet(SDEVICE_HANDLE(PropertyProxy)             *handle,
+                                              const PropertyProxySDeviceProperty        *property,
+                                              void                                      *propertyHandle,
+                                              const SDeviceSetPartialPropertyParameters *parameters);
