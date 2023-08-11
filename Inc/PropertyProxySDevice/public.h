@@ -63,11 +63,11 @@ SDEVICE_STRING_NAME_DECLARATION(PropertyProxy);
 SDEVICE_CREATE_HANDLE_DECLARATION(PropertyProxy, init, parent, identifier, context);
 SDEVICE_DISPOSE_HANDLE_DECLARATION(PropertyProxy, handlePointer);
 
-SDevicePropertyOperationStatus PropertyProxySDeviceRead(SDEVICE_HANDLE(PropertyProxy)             *handle,
-                                                        const PropertyProxySDeviceProperty        *property,
-                                                        void                                      *propertyHandle,
-                                                        const SDeviceGetPartialPropertyParameters *parameters);
-SDevicePropertyOperationStatus PropertyProxySDeviceWrite(SDEVICE_HANDLE(PropertyProxy)             *handle,
-                                                         const PropertyProxySDeviceProperty        *property,
-                                                         void                                      *propertyHandle,
-                                                         const SDeviceSetPartialPropertyParameters *parameters);
+SDevicePropertyStatus PropertyProxySDeviceRead(SDEVICE_HANDLE(PropertyProxy)             *handle,
+                                               const PropertyProxySDeviceProperty        *property,
+                                               void                                      *propertyHandle,
+                                               const SDeviceGetPartialPropertyParameters *parameters);
+SDevicePropertyStatus PropertyProxySDeviceWrite(SDEVICE_HANDLE(PropertyProxy)             *handle,
+                                                const PropertyProxySDeviceProperty        *property,
+                                                void                                      *propertyHandle,
+                                                const SDeviceSetPartialPropertyParameters *parameters);
