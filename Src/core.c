@@ -1,6 +1,5 @@
 #include "private.h"
 
-#include "SDeviceCore/errors.h"
 #include "SDeviceCore/common.h"
 #include "SDeviceCore/heap.h"
 

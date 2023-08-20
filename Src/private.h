@@ -1,6 +1,9 @@
 #pragma once
 
 #include "PropertyProxySDevice/public.h"
+#include "PropertyProxySDevice/log_extras.h"
+
+#include "SDeviceCore/errors.h"
 
 SDEVICE_RUNTIME_DATA_FORWARD_DECLARATION(PropertyProxy);
 
