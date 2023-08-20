@@ -169,9 +169,9 @@ static SDevicePropertyStatus TrySetWithRollback(ThisHandle                      
 
    if(hasRollbackOccurred)
    {
-      SDeviceLogStatus(handle, status == SDEVICE_PROPERTY_STATUS_OK ?
-                               PROPERTY_PROXY_SDEVICE_STATUS_ROLLBACK_SUCCESS :
-                               PROPERTY_PROXY_SDEVICE_STATUS_ROLLBACK_FAIL);
+      SDeviceLogStatus(handle, status != SDEVICE_PROPERTY_STATUS_OK        ?
+                               PROPERTY_PROXY_SDEVICE_STATUS_ROLLBACK_FAIL :
+                               PROPERTY_PROXY_SDEVICE_STATUS_ROLLBACK_SUCCESS);
       return SDEVICE_PROPERTY_STATUS_PROCESSING_ERROR;
    }
 
