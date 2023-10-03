@@ -1,22 +1,36 @@
 #include "private.h"
 
-#include "SDeviceCore/common.h"
 #include "SDeviceCore/heap.h"
+#include "SDeviceCore/common.h"
 
 #include <memory.h>
+#include <stdlib.h>
 
-SDEVICE_STRING_NAME_DEFINITION(PropertyProxy);
+SDEVICE_IDENTITY_BLOCK_DEFINITION(PropertyProxy,
+                                  ((const SDeviceUuid)
+                                  {
+                                     .High = PROPERTY_PROXY_SDEVICE_UUID_HIGH,
+                                     .Low  = PROPERTY_PROXY_SDEVICE_UUID_LOW
+                                  }),
+                                  ((const SDeviceVersion)
+                                  {
+                                     .Major = PROPERTY_PROXY_SDEVICE_VERSION_MAJOR,
+                                     .Minor = PROPERTY_PROXY_SDEVICE_VERSION_MINOR,
+                                     .Patch = PROPERTY_PROXY_SDEVICE_VERSION_PATCH
+                                  }));
 
-SDEVICE_CREATE_HANDLE_DECLARATION(PropertyProxy, init, parent, identifier, context)
+SDEVICE_CREATE_HANDLE_DECLARATION(PropertyProxy, init, owner, identifier, context)
 {
-   ThisHandle *handle = SDeviceMalloc(sizeof(ThisHandle));
+   UNUSED_PARAMETER(init);
+
+   ThisHandle *handle = SDeviceAllocHandle(sizeof(ThisInitData), sizeof(ThisRuntimeData));
    handle->Header = (SDeviceHandleHeader)
    {
-      .Context           = context,
-      .OwnerHandle       = parent,
-      .SDeviceStringName = SDEVICE_STRING_NAME(PropertyProxy),
-      .LatestStatus      = PROPERTY_PROXY_SDEVICE_STATUS_OK,
-      .Identifier        = identifier
+      .Context       = context,
+      .OwnerHandle   = owner,
+      .IdentityBlock = &SDEVICE_IDENTITY_BLOCK(PropertyProxy),
+      .LatestStatus  = PROPERTY_PROXY_SDEVICE_STATUS_OK,
+      .Identifier    = identifier
    };
 
    return handle;
@@ -29,205 +43,319 @@ SDEVICE_DISPOSE_HANDLE_DECLARATION(PropertyProxy, handlePointer)
    ThisHandle **_handlePointer = handlePointer;
    ThisHandle *handle = *_handlePointer;
 
-   SDeviceAssert(handle != NULL);
+   SDeviceAssert(IS_VALID_THIS_HANDLE(handle));
 
-   SDeviceFree(handle);
+   SDeviceFreeHandle(handle);
    *_handlePointer = NULL;
 }
 
-static SDevicePropertyStatus TrySetWithoutRollback(ThisHandle                                *handle,
-                                                   const PropertyProxySDeviceProperty        *property,
+static SDevicePropertyStatus SetCommonPropertyPart(ThisHandle                                *handle,
+                                                   const PropertyInternal                    *property,
                                                    void                                      *propertyHandle,
-                                                   const SDeviceSetPartialPropertyParameters *parameters)
+                                                   const SDeviceSetPartialPropertyParameters *parameters,
+                                                   bool                                      *wasChanged)
 {
-   SDeviceDebugAssert(handle != NULL);
-   SDeviceDebugAssert(property != NULL);
-   SDeviceDebugAssert(parameters != NULL);
-   SDeviceDebugAssert(propertyHandle != NULL);
-   SDeviceDebugAssert(parameters->Data != NULL);
-   SDeviceDebugAssert(property->Interface.Set != NULL);
-   SDeviceDebugAssert(!WILL_INT_ADD_OVERFLOW(parameters->Size, parameters->Offset) &&
-                      parameters->Size + parameters->Offset <= property->Size);
+   uint8_t *propertyBuffer = alloca(property->Size);
+   SDevicePropertyStatus getPropertyStatus =
+         property->Interface.AsCommon.Get(propertyHandle, propertyBuffer);
 
-   if(property->IsPartial)
-      return property->Interface.AsPartial.Set(propertyHandle, parameters);
+   SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(getPropertyStatus));
 
-   if(parameters->Size == property->Size)
-      return property->Interface.AsCommon.Set(propertyHandle, parameters->Data);
+   if(getPropertyStatus != SDEVICE_PROPERTY_STATUS_OK)
+      return getPropertyStatus;
 
-   SDeviceDebugAssert(property->Interface.AsCommon.Get != NULL);
+   bool willPropertyChange;
+   bool usePropertyCompare = (wasChanged != NULL);
 
-   /* read current value */
-   uint8_t valueBuffer[property->Size];
-   SDevicePropertyStatus status = property->Interface.AsCommon.Get(propertyHandle, valueBuffer);
+#if PROPERTY_PROXY_SDEVICE_USE_ROLLBACK
+   uint8_t *rollbackBuffer;
+   bool usePropertyRollback = property->AllowsRollback;
 
-   if(status != SDEVICE_PROPERTY_STATUS_OK)
-      return status;
+   if(usePropertyRollback)
+   {
+      rollbackBuffer = alloca(parameters->Size);
+      memcpy(rollbackBuffer, &propertyBuffer[parameters->Offset], parameters->Size);
+   }
+   else
+#endif
+   if(usePropertyCompare)
+   {
+      willPropertyChange =
+            (memcmp(&propertyBuffer[parameters->Offset], parameters->Data, parameters->Size) != 0);
+   }
 
-   /* prepare and write new value, using current value */
-   memcpy(&valueBuffer[parameters->Offset], parameters->Data, parameters->Size);
-   return property->Interface.AsCommon.Set(propertyHandle, valueBuffer);
+   memcpy(&propertyBuffer[parameters->Offset], parameters->Data, parameters->Size);
+
+   SDevicePropertyStatus setPropertyStatus =
+         property->Interface.AsCommon.Set(propertyHandle, parameters->Data);
+
+   SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(setPropertyStatus));
+
+   switch(setPropertyStatus)
+   {
+      case SDEVICE_PROPERTY_STATUS_OK:
+         if(usePropertyCompare)
+         {
+#if PROPERTY_PROXY_SDEVICE_USE_ROLLBACK
+            if(usePropertyRollback)
+            {
+               willPropertyChange =
+                     (memcmp(rollbackBuffer, parameters->Data, parameters->Size) != 0);
+            }
+#endif
+            *wasChanged = willPropertyChange;
+         }
+         break;
+
+#if PROPERTY_PROXY_SDEVICE_USE_ROLLBACK
+      case SDEVICE_PROPERTY_STATUS_PROCESSING_ERROR:
+         if(usePropertyRollback)
+         {
+            memcpy(&propertyBuffer[parameters->Offset], rollbackBuffer, parameters->Size);
+
+            SDevicePropertyStatus rollbackPropertyStatus =
+                  property->Interface.AsCommon.Set(propertyHandle, propertyBuffer);
+
+            SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(rollbackPropertyStatus));
+
+            LogSettingRollbackStatus(handle, PROPERTY_PROXY_SDEVICE_STATUS_ROLLBACK_OCCURRED, rollbackPropertyStatus);
+            return SDEVICE_PROPERTY_STATUS_PROCESSING_ERROR;
+         }
+         break;
+#endif
+
+      default:
+         break;
+   }
+
+   return setPropertyStatus;
 }
 
-#if defined(PROPERTY_PROXY_SDEVICE_USE_ROLLBACK)
-static SDevicePropertyStatus TrySetWithRollback(ThisHandle                                *handle,
-                                                const PropertyProxySDeviceProperty        *property,
-                                                void                                      *propertyHandle,
-                                                const SDeviceSetPartialPropertyParameters *parameters)
+static SDevicePropertyStatus SetCommonPropertyFull(ThisHandle                                *handle,
+                                                   const PropertyInternal                    *property,
+                                                   void                                      *propertyHandle,
+                                                   const SDeviceSetPartialPropertyParameters *parameters,
+                                                   bool                                      *wasChanged)
 {
-   SDeviceDebugAssert(handle != NULL);
-   SDeviceDebugAssert(property != NULL);
-   SDeviceDebugAssert(parameters != NULL);
-   SDeviceDebugAssert(propertyHandle != NULL);
-   SDeviceDebugAssert(parameters->Data != NULL);
-   SDeviceDebugAssert(property->AllowsRollback);
-   SDeviceDebugAssert(property->Interface.Set != NULL);
-   SDeviceDebugAssert(property->Interface.Get != NULL);
-   SDeviceDebugAssert(!WILL_INT_ADD_OVERFLOW(parameters->Size, parameters->Offset) &&
-                      parameters->Size + parameters->Offset <= property->Size);
+   uint8_t *propertyBuffer;
+   bool usePropertyCompare = (wasChanged != NULL);
 
-   bool hasRollbackOccurred = false;
-   SDevicePropertyStatus status;
-   uint8_t rollbackValueBuffer[parameters->Size];
+#if PROPERTY_PROXY_SDEVICE_USE_ROLLBACK
+   bool usePropertyRollback = property->AllowsRollback;
 
-   if(property->IsPartial)
+   if(property->Interface.AsPartial.Get != NULL && (usePropertyRollback || usePropertyCompare))
+#else
+   if(property->Interface.AsPartial.Get != NULL && usePropertyCompare)
+#endif
    {
-      /* try read current value part, that will be written (will be used in case rollback is needed) */
-      status = property->Interface.AsPartial.Get(propertyHandle,
-                                                 &(const SDeviceGetPartialPropertyParameters)
-                                                 {
-                                                    .Offset = parameters->Offset,
-                                                    .Size   = parameters->Size,
-                                                    .Data   = rollbackValueBuffer
-                                                 });
+      propertyBuffer = alloca(parameters->Size);
+      SDevicePropertyStatus getPropertyStatus =
+            property->Interface.AsCommon.Get(propertyHandle, propertyBuffer);
 
-      if(status != SDEVICE_PROPERTY_STATUS_OK)
-         return status;
+      SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(getPropertyStatus));
 
-      /* try write new value part */
-      status = property->Interface.AsPartial.Set(propertyHandle, parameters);
+      if(getPropertyStatus != SDEVICE_PROPERTY_STATUS_OK)
+         return getPropertyStatus;
+   }
+   else
+   {
+      propertyBuffer = NULL;
+   }
 
-      /* in case of processing error during write procedure, try to rollback all the changes */
-      if(status == SDEVICE_PROPERTY_STATUS_PROCESSING_ERROR)
-      {
-         hasRollbackOccurred = true;
-         status = property->Interface.AsPartial.Set(propertyHandle,
+   SDevicePropertyStatus setPropertyStatus =
+         property->Interface.AsCommon.Set(propertyHandle, parameters->Data);
+
+   SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(setPropertyStatus));
+
+   switch(setPropertyStatus)
+   {
+      case SDEVICE_PROPERTY_STATUS_OK:
+         if(usePropertyCompare)
+         {
+            *wasChanged =
+                  (propertyBuffer == NULL) ? true : (memcmp(propertyBuffer, parameters->Data, parameters->Size) != 0);
+         }
+         break;
+
+#if PROPERTY_PROXY_SDEVICE_USE_ROLLBACK
+      case SDEVICE_PROPERTY_STATUS_PROCESSING_ERROR:
+         if(usePropertyRollback && propertyBuffer != NULL)
+         {
+            SDevicePropertyStatus rollbackPropertyStatus =
+                  property->Interface.AsCommon.Set(propertyHandle, propertyBuffer);
+
+            SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(rollbackPropertyStatus));
+
+            LogSettingRollbackStatus(handle, PROPERTY_PROXY_SDEVICE_STATUS_ROLLBACK_OCCURRED, rollbackPropertyStatus);
+            return SDEVICE_PROPERTY_STATUS_PROCESSING_ERROR;
+         }
+         break;
+#endif
+
+      default:
+         break;
+   }
+
+   return setPropertyStatus;
+}
+
+static SDevicePropertyStatus SetPartialProperty(ThisHandle                                *handle,
+                                                const PropertyInternal                    *property,
+                                                void                                      *propertyHandle,
+                                                const SDeviceSetPartialPropertyParameters *parameters,
+                                                bool                                      *wasChanged)
+{
+   uint8_t *propertyBuffer;
+   bool usePropertyCompare = (wasChanged != NULL);
+
+#if PROPERTY_PROXY_SDEVICE_USE_ROLLBACK
+   bool usePropertyRollback = property->AllowsRollback;
+
+   if(property->Interface.AsPartial.Get != NULL && (usePropertyRollback || usePropertyCompare))
+#else
+   if(property->Interface.AsPartial.Get != NULL && usePropertyCompare)
+#endif
+   {
+      propertyBuffer = alloca(parameters->Size);
+      SDevicePropertyStatus getPropertyStatus =
+            property->Interface.AsPartial.Get(propertyHandle,
+                                              &(const SDeviceGetPartialPropertyParameters)
+                                              {
+                                                 .Offset = parameters->Offset,
+                                                 .Size   = parameters->Size,
+                                                 .Data   = propertyBuffer
+                                              });
+
+      SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(getPropertyStatus));
+
+      if(getPropertyStatus != SDEVICE_PROPERTY_STATUS_OK)
+         return getPropertyStatus;
+   }
+   else
+   {
+      propertyBuffer = NULL;
+   }
+
+   SDevicePropertyStatus setPropertyStatus =
+         property->Interface.AsPartial.Set(propertyHandle, parameters);
+
+   SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(setPropertyStatus));
+
+   switch(setPropertyStatus)
+   {
+      case SDEVICE_PROPERTY_STATUS_OK:
+         if(usePropertyCompare)
+         {
+            *wasChanged =
+                  (propertyBuffer == NULL) ? true : (memcmp(propertyBuffer, parameters->Data, parameters->Size) != 0);
+         }
+         break;
+
+#if PROPERTY_PROXY_SDEVICE_USE_ROLLBACK
+      case SDEVICE_PROPERTY_STATUS_PROCESSING_ERROR:
+         if(usePropertyRollback && propertyBuffer != NULL)
+         {
+            SDevicePropertyStatus rollbackPropertyStatus =
+                  property->Interface.AsPartial.Set(propertyHandle,
                                                     &(const SDeviceSetPartialPropertyParameters)
                                                     {
                                                        .Offset = parameters->Offset,
                                                        .Size   = parameters->Size,
-                                                       .Data   = rollbackValueBuffer
+                                                       .Data   = propertyBuffer
                                                     });
-      }
-   }
-   else if(parameters->Size == property->Size)
-   {
-      /* try read current value (will be used in case rollback is needed) */
-      status = property->Interface.AsCommon.Get(propertyHandle, rollbackValueBuffer);
 
-      if(status != SDEVICE_PROPERTY_STATUS_OK)
-         return status;
+            SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(rollbackPropertyStatus));
 
-      /* try write new value */
-      status = property->Interface.AsCommon.Set(propertyHandle, parameters->Data);
-
-      /* in case of processing error during write procedure, try to rollback all the changes */
-      if(status == SDEVICE_PROPERTY_STATUS_PROCESSING_ERROR)
-      {
-         hasRollbackOccurred = true;
-         status = property->Interface.AsCommon.Set(propertyHandle, rollbackValueBuffer);
-      }
-   }
-   else
-   {
-      uint8_t valueBuffer[property->Size];
-
-      /* try read current value to compose new value */
-      status = property->Interface.AsCommon.Get(propertyHandle, valueBuffer);
-
-      if(status != SDEVICE_PROPERTY_STATUS_OK)
-         return status;
-
-      /* save old value part, that will be written (will be used in case rollback is needed) */
-      memcpy(rollbackValueBuffer, &valueBuffer[parameters->Offset], parameters->Size);
-
-      /* compose new value */
-      memcpy(&valueBuffer[parameters->Offset], parameters->Data, parameters->Size);
-
-      /* try write new value */
-      status = property->Interface.AsCommon.Set(propertyHandle, valueBuffer);
-
-      /* in case of processing error during write procedure, try to rollback all the changes */
-      if(status == SDEVICE_PROPERTY_STATUS_PROCESSING_ERROR)
-      {
-         hasRollbackOccurred = true;
-         memcpy(&valueBuffer[parameters->Offset], rollbackValueBuffer, parameters->Size);
-         status = property->Interface.AsCommon.Set(propertyHandle, valueBuffer);
-      }
-   }
-
-   if(hasRollbackOccurred)
-   {
-      SDeviceLogStatus(handle, status != SDEVICE_PROPERTY_STATUS_OK        ?
-                               PROPERTY_PROXY_SDEVICE_STATUS_ROLLBACK_FAIL :
-                               PROPERTY_PROXY_SDEVICE_STATUS_ROLLBACK_SUCCESS);
-      return SDEVICE_PROPERTY_STATUS_PROCESSING_ERROR;
-   }
-
-   return status;
-}
+            LogSettingRollbackStatus(handle, PROPERTY_PROXY_SDEVICE_STATUS_ROLLBACK_OCCURRED, rollbackPropertyStatus);
+            return SDEVICE_PROPERTY_STATUS_PROCESSING_ERROR;
+         }
+         break;
 #endif
 
+      default:
+         break;
+   }
+
+   return setPropertyStatus;
+}
+
 SDevicePropertyStatus PropertyProxySDeviceGet(ThisHandle                                *handle,
-                                              const PropertyProxySDeviceProperty        *property,
+                                              const PropertyInternal                    *property,
                                               void                                      *propertyHandle,
                                               const SDeviceGetPartialPropertyParameters *parameters)
 {
-   SDeviceAssert(handle != NULL);
+   SDeviceAssert(IS_VALID_THIS_HANDLE(handle));
+
    SDeviceAssert(property != NULL);
    SDeviceAssert(parameters != NULL);
    SDeviceAssert(propertyHandle != NULL);
    SDeviceAssert(parameters->Data != NULL);
    SDeviceAssert(property->Interface.Get != NULL);
+
    SDeviceAssert(!WILL_INT_ADD_OVERFLOW(parameters->Size, parameters->Offset) &&
                  parameters->Size + parameters->Offset <= property->Size);
 
+   SDevicePropertyStatus getPropertyStatus;
+
    if(property->IsPartial)
-      return property->Interface.AsPartial.Get(propertyHandle, parameters);
+   {
+      getPropertyStatus = property->Interface.AsPartial.Get(propertyHandle, parameters);
 
-   if(parameters->Size == property->Size)
-      return property->Interface.AsCommon.Get(propertyHandle, parameters->Data);
+      SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(getPropertyStatus));
+   }
+   else if(parameters->Size == property->Size)
+   {
+      getPropertyStatus = property->Interface.AsCommon.Get(propertyHandle, parameters->Data);
 
-   /* use proxy buffer to get full value and then return only requested part */
-   uint8_t valueBuffer[property->Size];
-   SDevicePropertyStatus status = property->Interface.AsCommon.Get(propertyHandle, valueBuffer);
+      SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(getPropertyStatus));
+   }
+   else
+   {
+      uint8_t *valueBuffer = alloca(property->Size);
+      getPropertyStatus = property->Interface.AsCommon.Get(propertyHandle, valueBuffer);
 
-   if(status == SDEVICE_PROPERTY_STATUS_OK)
-      memcpy(parameters->Data, &valueBuffer[parameters->Offset], parameters->Size);
+      SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(getPropertyStatus));
 
-   return status;
+      if(getPropertyStatus == SDEVICE_PROPERTY_STATUS_OK)
+         memcpy(parameters->Data, &valueBuffer[parameters->Offset], parameters->Size);
+   }
+
+   return getPropertyStatus;
 }
 
 SDevicePropertyStatus PropertyProxySDeviceSet(ThisHandle                                *handle,
-                                              const PropertyProxySDeviceProperty        *property,
+                                              const PropertyInternal                    *property,
                                               void                                      *propertyHandle,
-                                              const SDeviceSetPartialPropertyParameters *parameters)
+                                              const SDeviceSetPartialPropertyParameters *parameters,
+                                              bool                                      *wasChanged)
 {
-   SDeviceAssert(handle != NULL);
+   SDeviceAssert(IS_VALID_THIS_HANDLE(handle));
+
    SDeviceAssert(property != NULL);
    SDeviceAssert(parameters != NULL);
    SDeviceAssert(propertyHandle != NULL);
    SDeviceAssert(parameters->Data != NULL);
    SDeviceAssert(property->Interface.Set != NULL);
+
    SDeviceAssert(!WILL_INT_ADD_OVERFLOW(parameters->Size, parameters->Offset) &&
                  parameters->Size + parameters->Offset <= property->Size);
 
-#if defined(PROPERTY_PROXY_SDEVICE_USE_ROLLBACK)
-   if(property->AllowsRollback && property->Interface.Get != NULL)
-      return TrySetWithRollback(handle, property, propertyHandle, parameters);
-#endif
+   SetPropertyFunction setPropertyFunction;
 
-   SDeviceAssert(property->IsPartial || parameters->Size == property->Size || property->Interface.Get != NULL);
+   if(property->IsPartial)
+   {
+      setPropertyFunction = SetPartialProperty;
+   }
+   else if(parameters->Size == property->Size)
+   {
+      setPropertyFunction = SetCommonPropertyFull;
+   }
+   else
+   {
+      SDeviceAssert(property->Interface.Get != NULL);
 
-   return TrySetWithoutRollback(handle, property, propertyHandle, parameters);
+      setPropertyFunction = SetCommonPropertyPart;
+   }
+
+   return setPropertyFunction(handle, property, propertyHandle, parameters, wasChanged);
 }

@@ -1,20 +1,19 @@
 #pragma once
 
-#include "config.h"
 #include "dependencies.h"
+#include "config.h"
+#include "log.h"
 
-#include <stdbool.h>
+/* e62b0f56-4db6-11ee-bd0b-2bd074ce77da */
+#define PROPERTY_PROXY_SDEVICE_UUID_HIGH 0xe62b0f564db611ee
+#define PROPERTY_PROXY_SDEVICE_UUID_LOW  0xbd0b2bd074ce77da
 
 #define PROPERTY_PROXY_SDEVICE_VERSION_MAJOR 2
 #define PROPERTY_PROXY_SDEVICE_VERSION_MINOR 0
 #define PROPERTY_PROXY_SDEVICE_VERSION_PATCH 0
-#define PROPERTY_PROXY_SDEVICE_VERSION (                                                                               \
-   (SDeviceVersion)                                                                                                    \
-   {                                                                                                                   \
-      .Major = PROPERTY_PROXY_SDEVICE_VERSION_MAJOR,                                                                   \
-      .Minor = PROPERTY_PROXY_SDEVICE_VERSION_MINOR,                                                                   \
-      .Patch = PROPERTY_PROXY_SDEVICE_VERSION_PATCH                                                                    \
-   })
+
+SDEVICE_HANDLE_FORWARD_DECLARATION(PropertyProxy);
+SDEVICE_INIT_DATA_FORWARD_DECLARATION(PropertyProxy);
 
 typedef struct
 {
@@ -40,27 +39,17 @@ typedef struct
    } Interface;
 
    size_t Size;
-   bool IsPartial;
-#if defined(PROPERTY_PROXY_SDEVICE_USE_ROLLBACK)
-   bool AllowsRollback;
+   bool   IsPartial;
+#if PROPERTY_PROXY_SDEVICE_USE_ROLLBACK
+   bool   AllowsRollback;
 #endif
 } PropertyProxySDeviceProperty;
 
-SDEVICE_HANDLE_FORWARD_DECLARATION(PropertyProxy);
-SDEVICE_INIT_DATA_FORWARD_DECLARATION(PropertyProxy);
-
-typedef enum
-{
-   PROPERTY_PROXY_SDEVICE_STATUS_OK,
-   PROPERTY_PROXY_SDEVICE_STATUS_ROLLBACK_FAIL,
-   PROPERTY_PROXY_SDEVICE_STATUS_ROLLBACK_SUCCESS
-} PropertyProxySDeviceStatus;
-
 SDEVICE_INIT_DATA_DECLARATION(PropertyProxy) { };
 
-SDEVICE_STRING_NAME_DECLARATION(PropertyProxy);
+SDEVICE_IDENTITY_BLOCK_DECLARATION(PropertyProxy);
 
-SDEVICE_CREATE_HANDLE_DECLARATION(PropertyProxy, init, parent, identifier, context);
+SDEVICE_CREATE_HANDLE_DECLARATION(PropertyProxy, init, owner, identifier, context);
 SDEVICE_DISPOSE_HANDLE_DECLARATION(PropertyProxy, handlePointer);
 
 SDevicePropertyStatus PropertyProxySDeviceGet(SDEVICE_HANDLE(PropertyProxy)             *handle,
@@ -70,4 +59,5 @@ SDevicePropertyStatus PropertyProxySDeviceGet(SDEVICE_HANDLE(PropertyProxy)     
 SDevicePropertyStatus PropertyProxySDeviceSet(SDEVICE_HANDLE(PropertyProxy)             *handle,
                                               const PropertyProxySDeviceProperty        *property,
                                               void                                      *propertyHandle,
-                                              const SDeviceSetPartialPropertyParameters *parameters);
+                                              const SDeviceSetPartialPropertyParameters *parameters,
+                                              bool                                      *wasChanged);
