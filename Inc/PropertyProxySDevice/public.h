@@ -1,48 +1,58 @@
 #pragma once
 
-#include "dependencies.h"
 #include "config.h"
+#include "dependencies.h"
 #include "log.h"
 
-/* e62b0f56-4db6-11ee-bd0b-2bd074ce77da */
-#define PROPERTY_PROXY_SDEVICE_UUID_HIGH 0xe62b0f564db611ee
-#define PROPERTY_PROXY_SDEVICE_UUID_LOW  0xbd0b2bd074ce77da
+/* E62B0F56-4DB6-11EE-BD0B-2BD074CE77DA */
+#define PROPERTY_PROXY_SDEVICE_UUID_HIGH 0xE62B0F564DB611EE
+#define PROPERTY_PROXY_SDEVICE_UUID_LOW  0xBD0B2BD074CE77DA
 
 #define PROPERTY_PROXY_SDEVICE_VERSION_MAJOR 2
 #define PROPERTY_PROXY_SDEVICE_VERSION_MINOR 0
 #define PROPERTY_PROXY_SDEVICE_VERSION_PATCH 0
 
+#define PROPERTY_PROXY_SDEVICE_IS_VALID_PROPERTY_TYPE(value) (                                                         \
+   (value) < PROPERTY_PROXY_SDEVICE_PROPERTY_TYPES_COUNT)
+
 SDEVICE_HANDLE_FORWARD_DECLARATION(PropertyProxy);
 SDEVICE_INIT_DATA_FORWARD_DECLARATION(PropertyProxy);
 
+typedef enum
+{
+   PROPERTY_PROXY_SDEVICE_PROPERTY_TYPE_SIMPLE,
+   PROPERTY_PROXY_SDEVICE_PROPERTY_TYPE_PARTIAL,
+   PROPERTY_PROXY_SDEVICE_PROPERTY_TYPE_INDEXER,
+
+   PROPERTY_PROXY_SDEVICE_PROPERTY_TYPES_COUNT
+} PropertyProxySDevicePropertyType;
+
 typedef struct
 {
-   union
-   {
-      struct
-      {
-         SDEVICE_SET_PROPERTY_POINTER(Set);
-         SDEVICE_GET_PROPERTY_POINTER(Get);
-      } AsCommon;
-
-      struct
-      {
-         SDEVICE_SET_PARTIAL_PROPERTY_POINTER(Set);
-         SDEVICE_GET_PARTIAL_PROPERTY_POINTER(Get);
-      } AsPartial;
-
-      struct
-      {
-         void *Set;
-         void *Get;
-      };
-   } Interface;
-
+   SDEVICE_GET_SIMPLE_PROPERTY_POINTER(Get);
+   SDEVICE_SET_SIMPLE_PROPERTY_POINTER(Set);
    size_t Size;
-   bool   IsPartial;
-#if PROPERTY_PROXY_SDEVICE_USE_ROLLBACK
-   bool   AllowsRollback;
-#endif
+} PropertyProxySDeviceSimplePropertyInterface;
+
+typedef struct
+{
+   SDEVICE_GET_PARTIAL_PROPERTY_POINTER(Get);
+   SDEVICE_SET_PARTIAL_PROPERTY_POINTER(Set);
+   size_t Size;
+} PropertyProxySDevicePartialPropertyInterface;
+
+typedef struct
+{
+   SDEVICE_GET_INDEXER_PROPERTY_POINTER(Get);
+   SDEVICE_SET_INDEXER_PROPERTY_POINTER(Set);
+   size_t ItemSize;
+   size_t Length;
+} PropertyProxySDeviceIndexerPropertyInterface;
+
+typedef struct
+{
+   PropertyProxySDevicePropertyType Type;
+   const void                      *Interface;
 } PropertyProxySDeviceProperty;
 
 SDEVICE_INIT_DATA_DECLARATION(PropertyProxy) { };
@@ -52,12 +62,15 @@ SDEVICE_IDENTITY_BLOCK_DECLARATION(PropertyProxy);
 SDEVICE_CREATE_HANDLE_DECLARATION(PropertyProxy, init, owner, identifier, context);
 SDEVICE_DISPOSE_HANDLE_DECLARATION(PropertyProxy, handlePointer);
 
-SDevicePropertyStatus PropertyProxySDeviceGet(SDEVICE_HANDLE(PropertyProxy)             *handle,
-                                              const PropertyProxySDeviceProperty        *property,
-                                              void                                      *propertyHandle,
-                                              const SDeviceGetPartialPropertyParameters *parameters);
-SDevicePropertyStatus PropertyProxySDeviceSet(SDEVICE_HANDLE(PropertyProxy)             *handle,
-                                              const PropertyProxySDeviceProperty        *property,
-                                              void                                      *propertyHandle,
-                                              const SDeviceSetPartialPropertyParameters *parameters,
-                                              bool                                      *wasChanged);
+SDevicePropertyStatus PropertyProxySDeviceGet(
+      SDEVICE_HANDLE(PropertyProxy)             *handle,
+      const PropertyProxySDeviceProperty        *property,
+      void                                      *target,
+      const SDeviceGetPartialPropertyParameters *parameters);
+
+SDevicePropertyStatus PropertyProxySDeviceSet(
+      SDEVICE_HANDLE(PropertyProxy)             *handle,
+      const PropertyProxySDeviceProperty        *property,
+      void                                      *target,
+      const SDeviceSetPartialPropertyParameters *parameters,
+      bool                                      *didChange);
