@@ -20,7 +20,7 @@ static inline SDevicePropertyStatus SetSimpleProperty(
    }
    else
    {
-      uint8_t valueBuffer[interface->Size];
+      char valueBuffer[interface->Size];
       SDevicePropertyStatus getStatus = interface->Get(target, valueBuffer);
 
       SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(getStatus));
@@ -44,7 +44,7 @@ static inline SDevicePropertyStatus SetCompareSimpleProperty(
       const SDeviceSetPartialPropertyParameters *parameters,
       bool                                      *didChange)
 {
-   uint8_t valueBuffer[interface->Size];
+   char valueBuffer[interface->Size];
    SDevicePropertyStatus getStatus = interface->Get(target, valueBuffer);
 
    SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(getStatus));
@@ -114,7 +114,7 @@ PROPERTY_PROXY_GET_DECLARATION(Simple, handle, interface, target, parameters)
       return getStatus;
    }
 
-   uint8_t valueBuffer[_interface->Size];
+   char valueBuffer[_interface->Size];
    SDevicePropertyStatus getStatus = _interface->Get(target, valueBuffer);
 
    SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(getStatus));

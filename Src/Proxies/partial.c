@@ -24,15 +24,16 @@ static inline SDevicePropertyStatus SetComparePartialProperty(
       const SDeviceSetPartialPropertyParameters *parameters,
       bool                                      *didChange)
 {
-   uint8_t valueBuffer[parameters->Size];
-   SDevicePropertyStatus getStatus = interface->Get(
-         target,
-         &(const SDeviceGetPartialPropertyParameters)
-         {
-            .Data   = valueBuffer,
-            .Offset = parameters->Offset,
-            .Size   = parameters->Size
-         });
+   char valueBuffer[parameters->Size];
+   SDevicePropertyStatus getStatus =
+         interface->Get(
+               target,
+               &(const SDeviceGetPartialPropertyParameters)
+               {
+                  .Data   = valueBuffer,
+                  .Offset = parameters->Offset,
+                  .Size   = parameters->Size
+               });
 
    SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(getStatus));
 

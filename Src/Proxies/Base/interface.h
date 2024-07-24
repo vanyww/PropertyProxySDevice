@@ -37,7 +37,7 @@ typedef struct
 #define PROPERTY_PROXY_GET_POINTER(pointer_name)                                                                       \
    PROPERTY_PROXY_GET_RETURN_VALUE (* pointer_name) PROPERTY_PROXY_GET_ARGUMENTS(,,,)
 #define PROPERTY_PROXY_GET(type_name)                                                                                  \
-   _PropertyProxySDeviceGet##type_name##Property
+   $PropertyProxySDeviceGet##type_name##Property
 #define PROPERTY_PROXY_GET_DECLARATION(                                                                                \
       type_name, handle_name, interface_name, target_name, parameters_name)                                            \
    PROPERTY_PROXY_GET_RETURN_VALUE                                                                                     \
@@ -54,7 +54,7 @@ typedef struct
 #define PROPERTY_PROXY_SET_POINTER(pointer_name)                                                                       \
    PROPERTY_PROXY_SET_RETURN_VALUE (* pointer_name) PROPERTY_PROXY_SET_ARGUMENTS(,,,,)
 #define PROPERTY_PROXY_SET(type_name)                                                                                  \
-   _PropertyProxySDeviceSet##type_name##Property
+   $PropertyProxySDeviceSet##type_name##Property
 #define PROPERTY_PROXY_SET_DECLARATION(                                                                                \
       type_name, handle_name, interface_name, target_name, parameters_name, did_change_name)                           \
    PROPERTY_PROXY_SET_RETURN_VALUE                                                                                     \

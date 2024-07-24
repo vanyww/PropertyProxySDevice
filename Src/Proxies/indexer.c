@@ -19,66 +19,69 @@ static inline SDevicePropertyStatus SetIndexerProperty(
    size_t fullsLength    = (parameters->Size - firstPartialSize) / interface->ItemSize,
          lastPartialSize = (parameters->Size - firstPartialSize) % interface->ItemSize;
 
-   const void *dataBuffer = parameters->Data;
-   const void *itemsBuffers[fullsLength + !!firstPartialSize + !!lastPartialSize];
+   const void *bytesBuffer = parameters->Data;
+   const void *itemsBuffers[fullsLength + (firstPartialSize > 0) + (lastPartialSize > 0)];
 
-   if(firstPartialSize)
+   if(firstPartialSize > 0)
    {
       void *itemBuffer = alloca(interface->ItemSize);
-      SDevicePropertyStatus getStatus = interface->Get(
-            target,
-            &(const SDeviceGetIndexerPropertyParameters)
-            {
-               .Items    = &itemBuffer,
-               .StartIdx = startIdx,
-               .Length   = 1
-            });
+      SDevicePropertyStatus getStatus =
+            interface->Get(
+                  target,
+                  &(const SDeviceGetIndexerPropertyParameters)
+                  {
+                     .Items    = &itemBuffer,
+                     .StartIdx = startIdx,
+                     .Length   = 1
+                  });
 
       SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(getStatus));
 
       if(getStatus != SDEVICE_PROPERTY_STATUS_OK)
          return getStatus;
 
-      memcpy(itemBuffer + firstPartialOffset, dataBuffer, firstPartialSize);
+      memcpy(itemBuffer + firstPartialOffset, bytesBuffer, firstPartialSize);
       FIRST(itemsBuffers) = itemBuffer;
-      dataBuffer += firstPartialSize;
+      bytesBuffer += firstPartialSize;
    }
 
-   for(size_t i = !!firstPartialSize; i < LENGTHOF(itemsBuffers) - !!lastPartialSize; i++)
+   for(size_t i = (firstPartialSize > 0); i < LENGTHOF(itemsBuffers) - (lastPartialSize > 0); i++)
    {
-      itemsBuffers[i] = dataBuffer;
-      dataBuffer += interface->ItemSize;
+      itemsBuffers[i] = bytesBuffer;
+      bytesBuffer += interface->ItemSize;
    }
 
-   if(lastPartialSize)
+   if(lastPartialSize > 0)
    {
       void *itemBuffer = alloca(interface->ItemSize);
-      SDevicePropertyStatus getStatus = interface->Get(
-            target,
-            &(const SDeviceGetIndexerPropertyParameters)
-            {
-               .Items    = &itemBuffer,
-               .StartIdx = startIdx + LENGTHOF(itemsBuffers) - 1,
-               .Length   = 1
-            });
+      SDevicePropertyStatus getStatus =
+            interface->Get(
+                  target,
+                  &(const SDeviceGetIndexerPropertyParameters)
+                  {
+                     .Items    = &itemBuffer,
+                     .StartIdx = startIdx + LENGTHOF(itemsBuffers) - 1,
+                     .Length   = 1
+                  });
 
       SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(getStatus));
 
       if(getStatus != SDEVICE_PROPERTY_STATUS_OK)
          return getStatus;
 
-      memcpy(itemBuffer, dataBuffer, lastPartialSize);
+      memcpy(itemBuffer, bytesBuffer, lastPartialSize);
       LAST(itemsBuffers) = itemBuffer;
    }
 
-   SDevicePropertyStatus setStatus = interface->Set(
-         target,
-         &(const SDeviceSetIndexerPropertyParameters)
-         {
-            .Items    = itemsBuffers,
-            .StartIdx = startIdx,
-            .Length   = LENGTHOF(itemsBuffers)
-         });
+   SDevicePropertyStatus setStatus =
+         interface->Set(
+               target,
+               &(const SDeviceSetIndexerPropertyParameters)
+               {
+                  .Items    = itemsBuffers,
+                  .StartIdx = startIdx,
+                  .Length   = LENGTHOF(itemsBuffers)
+               });
 
    SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(setStatus));
 
@@ -100,20 +103,21 @@ static inline SDevicePropertyStatus SetCompareIndexerProperty(
    size_t fullsLength    = (parameters->Size - firstPartialSize) / interface->ItemSize,
          lastPartialSize = (parameters->Size - firstPartialSize) % interface->ItemSize;
 
-   const void *dataBuffer = parameters->Data;
-   const void *itemsBuffers[fullsLength + !!firstPartialSize + !!lastPartialSize];
+   const void *bytesBuffer = parameters->Data;
+   const void *itemsBuffers[fullsLength + (firstPartialSize > 0) + (lastPartialSize > 0)];
 
    for(size_t i = 0; i < LENGTHOF(itemsBuffers); i++)
       itemsBuffers[i] = alloca(interface->ItemSize);
 
-   SDevicePropertyStatus getStatus = interface->Get(
-         target,
-         &(const SDeviceGetIndexerPropertyParameters)
-         {
-            .Items    = (void **)itemsBuffers,
-            .StartIdx = startIdx,
-            .Length   = LENGTHOF(itemsBuffers)
-         });
+   SDevicePropertyStatus getStatus =
+         interface->Get(
+               target,
+               &(const SDeviceGetIndexerPropertyParameters)
+               {
+                  .Items    = (void **)itemsBuffers,
+                  .StartIdx = startIdx,
+                  .Length   = LENGTHOF(itemsBuffers)
+               });
 
    SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(getStatus));
 
@@ -122,41 +126,41 @@ static inline SDevicePropertyStatus SetCompareIndexerProperty(
 
    bool willChange = false;
 
-   if(firstPartialSize)
+   if(firstPartialSize > 0)
    {
-      if(!willChange)
-         willChange = !!memcmp(FIRST(itemsBuffers) + firstPartialOffset, dataBuffer, firstPartialSize);
+      willChange = !!memcmp(FIRST(itemsBuffers) + firstPartialOffset, bytesBuffer, firstPartialSize);
 
-      memcpy((void *)FIRST(itemsBuffers) + firstPartialOffset, dataBuffer, firstPartialSize);
+      memcpy((void *)FIRST(itemsBuffers) + firstPartialOffset, bytesBuffer, firstPartialSize);
 
-      dataBuffer += firstPartialSize;
+      bytesBuffer += firstPartialSize;
    }
 
-   for(size_t i = !!firstPartialSize; i < LENGTHOF(itemsBuffers) - !!lastPartialSize; i++)
+   for(size_t i = (firstPartialSize > 0); i < LENGTHOF(itemsBuffers) - (lastPartialSize > 0); i++)
    {
       if(!willChange)
-         willChange = !!memcmp(itemsBuffers[i], dataBuffer, interface->ItemSize);
+         willChange = !!memcmp(itemsBuffers[i], bytesBuffer, interface->ItemSize);
 
-      itemsBuffers[i] = dataBuffer;
-      dataBuffer += interface->ItemSize;
+      itemsBuffers[i] = bytesBuffer;
+      bytesBuffer += interface->ItemSize;
    }
 
-   if(lastPartialSize)
+   if(lastPartialSize > 0)
    {
       if(!willChange)
-         willChange = !!memcmp(LAST(itemsBuffers), dataBuffer, lastPartialSize);
+         willChange = !!memcmp(LAST(itemsBuffers), bytesBuffer, lastPartialSize);
 
-      memcpy((void *)LAST(itemsBuffers), dataBuffer, lastPartialSize);
+      memcpy((void *)LAST(itemsBuffers), bytesBuffer, lastPartialSize);
    }
 
-   SDevicePropertyStatus setStatus = interface->Set(
-         target,
-         &(const SDeviceSetIndexerPropertyParameters)
-         {
-            .Items    = itemsBuffers,
-            .StartIdx = startIdx,
-            .Length   = LENGTHOF(itemsBuffers)
-         });
+   SDevicePropertyStatus setStatus =
+         interface->Set(
+               target,
+               &(const SDeviceSetIndexerPropertyParameters)
+               {
+                  .Items    = itemsBuffers,
+                  .StartIdx = startIdx,
+                  .Length   = LENGTHOF(itemsBuffers)
+               });
 
    SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(setStatus));
 
@@ -203,39 +207,40 @@ PROPERTY_PROXY_GET_DECLARATION(Indexer, handle, interface, target, parameters)
    size_t fullsLength    = (parameters->Size - firstPartialSize) / _interface->ItemSize,
          lastPartialSize = (parameters->Size - firstPartialSize) % _interface->ItemSize;
 
-   void *dataBuffer = parameters->Data + firstPartialSize;
-   void *itemsBuffers[fullsLength + !!firstPartialSize + !!lastPartialSize];
+   void *bytesBuffer = parameters->Data + firstPartialSize;
+   void *itemsBuffers[fullsLength + (firstPartialSize > 0) + (lastPartialSize > 0)];
 
-   if(firstPartialSize)
+   if(firstPartialSize > 0)
       FIRST(itemsBuffers) = alloca(_interface->ItemSize);
 
-   for(size_t idx = !!firstPartialSize; idx < LENGTHOF(itemsBuffers) - !!lastPartialSize; idx++)
+   for(size_t idx = (firstPartialSize > 0); idx < LENGTHOF(itemsBuffers) - (lastPartialSize > 0); idx++)
    {
-      itemsBuffers[idx] = dataBuffer;
-      dataBuffer += _interface->ItemSize;
+      itemsBuffers[idx] = bytesBuffer;
+      bytesBuffer += _interface->ItemSize;
    }
 
-   if(lastPartialSize)
+   if(lastPartialSize > 0)
       LAST(itemsBuffers) = alloca(_interface->ItemSize);
 
-   SDevicePropertyStatus getStatus = _interface->Get(
-         target,
-         &(const SDeviceGetIndexerPropertyParameters)
-         {
-            .Items    = itemsBuffers,
-            .StartIdx = startIdx,
-            .Length   = LENGTHOF(itemsBuffers)
-         });
+   SDevicePropertyStatus getStatus =
+         _interface->Get(
+               target,
+               &(const SDeviceGetIndexerPropertyParameters)
+               {
+                  .Items    = itemsBuffers,
+                  .StartIdx = startIdx,
+                  .Length   = LENGTHOF(itemsBuffers)
+               });
 
    SDeviceAssert(SDEVICE_IS_VALID_PROPERTY_OPERATION_STATUS(getStatus));
 
    if(getStatus != SDEVICE_PROPERTY_STATUS_OK)
       return getStatus;
 
-   if(firstPartialSize)
+   if(firstPartialSize > 0)
       memcpy(parameters->Data, FIRST(itemsBuffers) + firstPartialOffset, firstPartialSize);
 
-   if(lastPartialSize)
+   if(lastPartialSize > 0)
       memcpy(parameters->Data + (parameters->Size - lastPartialSize), LAST(itemsBuffers), lastPartialSize);
 
    return SDEVICE_PROPERTY_STATUS_OK;
