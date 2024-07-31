@@ -90,10 +90,9 @@ PROPERTY_PROXY_SET_DECLARATION(Simple, handle, interface, target, parameters, di
    SDeviceAssert(!WILL_INT_ADD_OVERFLOW(parameters->Size, parameters->Offset));
    SDeviceAssert(parameters->Size + parameters->Offset <= _interface->Size);
 
-   return
-         (didChange) ?
-               SetCompareSimpleProperty(handle, _interface, target, parameters, didChange) :
-               SetSimpleProperty(handle, _interface, target, parameters);
+   return (didChange) ?
+         SetCompareSimpleProperty(handle, _interface, target, parameters, didChange) :
+         SetSimpleProperty(handle, _interface, target, parameters);
 }
 
 PROPERTY_PROXY_GET_DECLARATION(Simple, handle, interface, target, parameters)

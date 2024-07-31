@@ -1,6 +1,5 @@
 #include "Proxies/simple.h"
 #include "Proxies/partial.h"
-#include "Proxies/indexer.h"
 
 #include "SDeviceCore/common.h"
 #include "SDeviceCore/heap.h"
@@ -22,8 +21,7 @@ SDEVICE_IDENTITY_BLOCK_DEFINITION(
 static const PropertyProxyInterface ProxyInterfaces[] =
 {
    [PROPERTY_PROXY_SDEVICE_PROPERTY_TYPE_SIMPLE]  = COMPOSE_PROPERTY_PROXY_INTERFACE(Simple),
-   [PROPERTY_PROXY_SDEVICE_PROPERTY_TYPE_PARTIAL] = COMPOSE_PROPERTY_PROXY_INTERFACE(Partial),
-   [PROPERTY_PROXY_SDEVICE_PROPERTY_TYPE_INDEXER] = COMPOSE_PROPERTY_PROXY_INTERFACE(Indexer)
+   [PROPERTY_PROXY_SDEVICE_PROPERTY_TYPE_PARTIAL] = COMPOSE_PROPERTY_PROXY_INTERFACE(Partial)
 };
 
 static_assert(LENGTHOF(ProxyInterfaces) == PROPERTY_PROXY_SDEVICE_PROPERTY_TYPES_COUNT);

@@ -22,7 +22,6 @@ typedef enum
 {
    PROPERTY_PROXY_SDEVICE_PROPERTY_TYPE_SIMPLE,
    PROPERTY_PROXY_SDEVICE_PROPERTY_TYPE_PARTIAL,
-   PROPERTY_PROXY_SDEVICE_PROPERTY_TYPE_INDEXER,
 
    PROPERTY_PROXY_SDEVICE_PROPERTY_TYPES_COUNT
 } PropertyProxySDevicePropertyType;
@@ -40,14 +39,6 @@ typedef struct
    SDEVICE_SET_PARTIAL_PROPERTY_POINTER(Set);
    size_t Size;
 } PropertyProxySDevicePartialPropertyInterface;
-
-typedef struct
-{
-   SDEVICE_GET_INDEXER_PROPERTY_POINTER(Get);
-   SDEVICE_SET_INDEXER_PROPERTY_POINTER(Set);
-   size_t ItemSize;
-   size_t Length;
-} PropertyProxySDeviceIndexerPropertyInterface;
 
 typedef struct
 {
