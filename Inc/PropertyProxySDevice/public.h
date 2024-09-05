@@ -65,3 +65,5 @@ SDevicePropertyStatus PropertyProxySDeviceSet(
       void                                      *target,
       const SDeviceSetPartialPropertyParameters *parameters,
       bool                                      *didChange);
+
+size_t PropertyProxySDeviceComputeTotalSize(const PropertyProxySDeviceProperty *property);

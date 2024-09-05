@@ -59,8 +59,8 @@ SDEVICE_DISPOSE_HANDLE_DECLARATION(PropertyProxy, handlePointer)
 }
 
 SDevicePropertyStatus PropertyProxySDeviceGet(
-      SDEVICE_HANDLE(PropertyProxy)             *handle,
-      const PropertyProxySDeviceProperty        *property,
+      ThisHandle                                *handle,
+      const ThisProperty                        *property,
       void                                      *target,
       const SDeviceGetPartialPropertyParameters *parameters)
 {
@@ -78,8 +78,8 @@ SDevicePropertyStatus PropertyProxySDeviceGet(
 }
 
 SDevicePropertyStatus PropertyProxySDeviceSet(
-      SDEVICE_HANDLE(PropertyProxy)             *handle,
-      const PropertyProxySDeviceProperty        *property,
+      ThisHandle                                *handle,
+      const ThisProperty                        *property,
       void                                      *target,
       const SDeviceSetPartialPropertyParameters *parameters,
       bool                                      *didChange)
@@ -95,4 +95,14 @@ SDevicePropertyStatus PropertyProxySDeviceSet(
    SDeviceAssert(PROPERTY_PROXY_SDEVICE_IS_VALID_PROPERTY_TYPE(property->Type));
 
    return ProxyInterfaces[property->Type].Set(handle, property->Interface, target, parameters, didChange);
+}
+
+size_t PropertyProxySDeviceComputeTotalSize(const ThisProperty *property)
+{
+   SDeviceAssert(property);
+   SDeviceAssert(property->Interface);
+
+   SDeviceAssert(PROPERTY_PROXY_SDEVICE_IS_VALID_PROPERTY_TYPE(property->Type));
+
+   return ProxyInterfaces[property->Type].ComputeTotalSize(property->Interface);
 }

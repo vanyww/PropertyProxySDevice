@@ -125,3 +125,10 @@ PROPERTY_PROXY_GET_DECLARATION(Simple, handle, interface, target, parameters)
 
    return SDEVICE_PROPERTY_STATUS_OK;
 }
+
+PROPERTY_PROXY_COMPUTE_TOTAL_SIZE_DECLARATION(Simple, interface)
+{
+   const ThisSimplePropertyInterface *_interface = interface;
+
+   return _interface->Size;
+}

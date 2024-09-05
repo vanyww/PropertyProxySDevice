@@ -83,3 +83,10 @@ PROPERTY_PROXY_GET_DECLARATION(Partial, handle, interface, target, parameters)
 
    return getStatus;
 }
+
+PROPERTY_PROXY_COMPUTE_TOTAL_SIZE_DECLARATION(Partial, interface)
+{
+   const ThisPartialPropertyInterface *_interface = interface;
+
+   return _interface->Size;
+}
