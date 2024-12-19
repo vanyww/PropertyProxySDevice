@@ -58,14 +58,20 @@ PROPERTY_PROXY_SET_DECLARATION(Partial, handle, interface, target, parameters, d
    const ThisPartialPropertyInterface *_interface = interface;
 
    SDeviceAssert(_interface->Set);
-   SDeviceAssert(_interface->Get);
 
    SDeviceAssert(!WILL_INT_ADD_OVERFLOW(parameters->Size, parameters->Offset));
    SDeviceAssert(parameters->Size + parameters->Offset <= _interface->Size);
 
-   return (didChange) ?
-         SetComparePartialProperty(handle, _interface, target, parameters, didChange) :
-         SetPartialProperty(handle, _interface, target, parameters);
+   if(didChange)
+   {
+      SDeviceAssert(_interface->Get);
+
+      return SetComparePartialProperty(handle, _interface, target, parameters, didChange);
+   }
+   else
+   {
+      return SetPartialProperty(handle, _interface, target, parameters);
+   }
 }
 
 PROPERTY_PROXY_GET_DECLARATION(Partial, handle, interface, target, parameters)
