@@ -1,22 +1,9 @@
 #include "Proxies/simple.h"
 #include "Proxies/partial.h"
 
+#include "SDeviceCore/errors.h"
 #include "SDeviceCore/common.h"
 #include "SDeviceCore/heap.h"
-
-SDEVICE_IDENTITY_BLOCK_DEFINITION(
-      PropertyProxy,
-      ((const SDeviceUuid)
-      {
-         .High = PROPERTY_PROXY_SDEVICE_UUID_HIGH,
-         .Low  = PROPERTY_PROXY_SDEVICE_UUID_LOW
-      }),
-      ((const SDeviceVersion)
-      {
-         .Major = PROPERTY_PROXY_SDEVICE_VERSION_MAJOR,
-         .Minor = PROPERTY_PROXY_SDEVICE_VERSION_MINOR,
-         .Patch = PROPERTY_PROXY_SDEVICE_VERSION_PATCH
-      }));
 
 static const PropertyProxyInterface ProxyInterfaces[] =
 {
@@ -26,20 +13,13 @@ static const PropertyProxyInterface ProxyInterfaces[] =
 
 static_assert(LENGTHOF(ProxyInterfaces) == PROPERTY_PROXY_SDEVICE_PROPERTY_TYPES_COUNT);
 
-SDEVICE_CREATE_HANDLE_DECLARATION(PropertyProxy, init, owner, identifier, context)
+SDEVICE_CREATE_HANDLE_DECLARATION(PropertyProxy, init, context)
 {
    UNUSED_PARAMETER(init);
 
    ThisHandle *instance = SDeviceAllocateHandle(sizeof(*instance->Init), sizeof(*instance->Runtime));
 
-   instance->Header = (SDeviceHandleHeader)
-   {
-      .Context       = context,
-      .OwnerHandle   = owner,
-      .IdentityBlock = &SDEVICE_IDENTITY_BLOCK(PropertyProxy),
-      .LatestStatus  = PROPERTY_PROXY_SDEVICE_STATUS_OK,
-      .Identifier    = identifier
-   };
+   instance->Context = context;
 
    return instance;
 }
@@ -51,7 +31,7 @@ SDEVICE_DISPOSE_HANDLE_DECLARATION(PropertyProxy, handlePointer)
    ThisHandle **_handlePointer = handlePointer;
    ThisHandle *handle = *_handlePointer;
 
-   SDeviceAssert(IS_VALID_THIS_HANDLE(handle));
+   SDeviceAssert(handle);
 
    SDeviceFreeHandle(handle);
 
@@ -64,7 +44,7 @@ SDevicePropertyStatus PropertyProxySDeviceGet(
       void                                      *target,
       const SDeviceGetPartialPropertyParameters *parameters)
 {
-   SDeviceAssert(IS_VALID_THIS_HANDLE(handle));
+   SDeviceAssert(handle);
 
    SDeviceAssert(target);
    SDeviceAssert(property);
@@ -84,7 +64,7 @@ SDevicePropertyStatus PropertyProxySDeviceSet(
       const SDeviceSetPartialPropertyParameters *parameters,
       bool                                      *didChange)
 {
-   SDeviceAssert(IS_VALID_THIS_HANDLE(handle));
+   SDeviceAssert(handle);
 
    SDeviceAssert(target);
    SDeviceAssert(property);

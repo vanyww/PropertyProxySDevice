@@ -2,11 +2,6 @@
 
 #include "config.h"
 #include "dependencies.h"
-#include "log.h"
-
-/* E62B0F56-4DB6-11EE-BD0B-2BD074CE77DA */
-#define PROPERTY_PROXY_SDEVICE_UUID_HIGH 0xE62B0F564DB611EE
-#define PROPERTY_PROXY_SDEVICE_UUID_LOW  0xBD0B2BD074CE77DA
 
 #define PROPERTY_PROXY_SDEVICE_VERSION_MAJOR 2
 #define PROPERTY_PROXY_SDEVICE_VERSION_MINOR 0
@@ -48,9 +43,7 @@ typedef struct
 
 SDEVICE_INIT_DATA_DECLARATION(PropertyProxy) { };
 
-SDEVICE_IDENTITY_BLOCK_DECLARATION(PropertyProxy);
-
-SDEVICE_CREATE_HANDLE_DECLARATION(PropertyProxy, init, owner, identifier, context);
+SDEVICE_CREATE_HANDLE_DECLARATION(PropertyProxy, init, context);
 SDEVICE_DISPOSE_HANDLE_DECLARATION(PropertyProxy, handlePointer);
 
 SDevicePropertyStatus PropertyProxySDeviceGet(

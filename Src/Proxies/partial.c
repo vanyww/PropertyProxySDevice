@@ -1,6 +1,7 @@
 #include "partial.h"
 
 #include "SDeviceCore/common.h"
+#include "SDeviceCore/errors.h"
 
 #include <memory.h>
 

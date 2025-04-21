@@ -2,8 +2,6 @@
 
 #include "PropertyProxySDevice/public.h"
 
-#define IS_VALID_THIS_HANDLE(handle) SDEVICE_IS_VALID_HANDLE(PropertyProxy, handle)
-
 SDEVICE_RUNTIME_DATA_FORWARD_DECLARATION(PropertyProxy);
 
 SDEVICE_RUNTIME_DATA_DECLARATION(PropertyProxy) { };
