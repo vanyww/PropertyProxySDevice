@@ -1,88 +1,66 @@
-#include "Proxies/simple.h"
-#include "Proxies/partial.h"
+#include "private.h"
+#include "Maps/proxy_map.h"
 
-#include "SDeviceCore/errors.h"
-#include "SDeviceCore/common.h"
-#include "SDeviceCore/heap.h"
+#include "SDeviceCore/assert.h"
 
-static const PropertyProxyInterface ProxyInterfaces[] =
-{
-   [PROPERTY_PROXY_SDEVICE_PROPERTY_TYPE_SIMPLE]  = COMPOSE_PROPERTY_PROXY_INTERFACE(Simple),
-   [PROPERTY_PROXY_SDEVICE_PROPERTY_TYPE_PARTIAL] = COMPOSE_PROPERTY_PROXY_INTERFACE(Partial)
-};
-
-static_assert(LENGTHOF(ProxyInterfaces) == PROPERTY_PROXY_SDEVICE_PROPERTY_TYPES_COUNT);
-
-SDEVICE_CREATE_HANDLE_DECLARATION(PropertyProxy, init, context)
-{
-   UNUSED_PARAMETER(init);
-
-   ThisHandle *instance = SDeviceAllocateHandle(sizeof(*instance->Init), sizeof(*instance->Runtime));
-
-   instance->Context = context;
-
-   return instance;
-}
-
-SDEVICE_DISPOSE_HANDLE_DECLARATION(PropertyProxy, handlePointer)
-{
-   SDeviceAssert(handlePointer);
-
-   ThisHandle **_handlePointer = handlePointer;
-   ThisHandle *handle = *_handlePointer;
-
-   SDeviceAssert(handle);
-
-   SDeviceFreeHandle(handle);
-
-   *_handlePointer = NULL;
-}
+#define IS_VALID_PROPERTY_TYPE_IDX(value) (                                                                            \
+   (value) < PROPERTY_PROXY_SDEVICE_PROPERTY_TYPE_IDXS_COUNT)
 
 SDevicePropertyStatus PropertyProxySDeviceGet(
-      ThisHandle                                *handle,
-      const ThisProperty                        *property,
+      const PropertyProxySDeviceProperty        *property,
       void                                      *target,
       const SDeviceGetPartialPropertyParameters *parameters)
 {
-   SDeviceAssert(handle);
-
-   SDeviceAssert(target);
    SDeviceAssert(property);
+   SDeviceAssert(target);
    SDeviceAssert(parameters);
    SDeviceAssert(parameters->Data);
-   SDeviceAssert(property->Interface);
+   SDeviceAssert(property->Interface.AsAny.Get);
 
-   SDeviceAssert(PROPERTY_PROXY_SDEVICE_IS_VALID_PROPERTY_TYPE(property->Type));
+   SDeviceAssert(
+         !WILL_INT_ADD_OVERFLOW(
+               parameters->Size, parameters->Offset));
 
-   return ProxyInterfaces[property->Type].Get(handle, property->Interface, target, parameters);
+   SDeviceAssert(
+         parameters->Size + parameters->Offset <=
+         property->Interface.AsAny.Size);
+
+   SDeviceAssert(
+         IS_VALID_PROPERTY_TYPE_IDX(
+               property->TypeIdx));
+
+   const Proxy *proxy =
+         &ProxyMap[property->TypeIdx];
+
+   return proxy->Get(&property->Interface, target, parameters);
 }
 
 SDevicePropertyStatus PropertyProxySDeviceSet(
-      ThisHandle                                *handle,
-      const ThisProperty                        *property,
+      const PropertyProxySDeviceProperty        *property,
       void                                      *target,
       const SDeviceSetPartialPropertyParameters *parameters,
       bool                                      *didChange)
 {
-   SDeviceAssert(handle);
-
-   SDeviceAssert(target);
    SDeviceAssert(property);
+   SDeviceAssert(target);
    SDeviceAssert(parameters);
    SDeviceAssert(parameters->Data);
-   SDeviceAssert(property->Interface);
+   SDeviceAssert(property->Interface.AsAny.Set);
 
-   SDeviceAssert(PROPERTY_PROXY_SDEVICE_IS_VALID_PROPERTY_TYPE(property->Type));
+   SDeviceAssert(
+         !WILL_INT_ADD_OVERFLOW(
+               parameters->Size, parameters->Offset));
 
-   return ProxyInterfaces[property->Type].Set(handle, property->Interface, target, parameters, didChange);
-}
+   SDeviceAssert(
+         parameters->Size + parameters->Offset <=
+         property->Interface.AsAny.Size);
 
-size_t PropertyProxySDeviceComputeTotalSize(const ThisProperty *property)
-{
-   SDeviceAssert(property);
-   SDeviceAssert(property->Interface);
+   SDeviceAssert(
+         IS_VALID_PROPERTY_TYPE_IDX(
+               property->TypeIdx));
 
-   SDeviceAssert(PROPERTY_PROXY_SDEVICE_IS_VALID_PROPERTY_TYPE(property->Type));
+   const Proxy *proxy =
+         &ProxyMap[property->TypeIdx];
 
-   return ProxyInterfaces[property->Type].ComputeTotalSize(property->Interface);
+   return proxy->Set(&property->Interface, target, parameters, didChange);
 }
